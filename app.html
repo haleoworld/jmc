@@ -586,6 +586,7 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
       <button class="btn ghost" id="q_select_all">Select all</button>
       <span class="muted small" id="q_selected_count">0 selected</span>
       <button class="btn ghost" id="q_rescreen_all" style="margin-left:auto">Re-screen all</button>
+      <button class="btn ghost" id="q_add_to_batch">Add to batch…</button>
       <button class="btn" id="q_create_batch">Create batch</button>
     </div>
 
@@ -751,6 +752,13 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
       <label>Target job titles (comma-separated)</label>
       <input type="text" id="p_target_titles" placeholder="Senior Frontend Engineer, Senior Web Developer, ...">
     </div>
+    <div class="row" style="margin-top:14px">
+      <div class="col">
+        <label>Default application questions (one per line — used by the batch analyzer)</label>
+        <textarea id="p_default_questions" style="min-height:160px;font-family:inherit;font-size:14px" placeholder="One question per line"></textarea>
+        <p class="small muted" style="margin-top:4px">When a batch is analyzed, Claude drafts answers to each of these questions per job. Edit freely.</p>
+      </div>
+    </div>
   </div>
 
   <div class="card" data-settings-section="criteria">
@@ -854,8 +862,16 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
     <p class="small muted" style="margin:0 0 10px">Tracks every Claude API call on this device. Real token-based cost when calling via your API key; approximate cost when running inside Cowork (free).</p>
     <div class="row">
       <div class="col">
-        <label>Monthly budget (USD, optional)</label>
+        <label>Anthropic API balance (USD)</label>
+        <input type="number" id="s_balance" placeholder="Current credit in your account" min="0" step="0.01">
+        <p class="small muted" style="margin-top:4px">Anthropic doesn't expose a billing API to browsers — paste your current credit here whenever you top up. The header chip will show "session $ • left $" computed as balance minus lifetime tracked spend.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label>Monthly budget cap (optional)</label>
         <input type="number" id="s_budget" placeholder="e.g. 20" min="0" step="1">
+        <p class="small muted" style="margin-top:4px">A self-imposed monthly soft cap, independent of balance.</p>
       </div>
     </div>
     <div id="s_usage_summary" style="margin-top:12px"></div>
@@ -977,7 +993,17 @@ function loadState() {
         s.settings.gist_id = s.settings.gist_id || "";
         s.settings.last_synced_at = s.settings.last_synced_at || "";
         if (typeof s.settings.budget_usd !== "number") s.settings.budget_usd = 0;
+        if (typeof s.settings.balance_usd !== "number") s.settings.balance_usd = 0;
         if (!Array.isArray(s.settings.usage_log)) s.settings.usage_log = [];
+        if (!Array.isArray(s.settings.default_questions) || !s.settings.default_questions.length) {
+          s.settings.default_questions = [
+            "Tell us about yourself (3 sentences max)",
+            "Why are you interested in this role and this company?",
+            "What is your salary expectation? Use a CAD range starting around 130k.",
+            "What is your notice period and your earliest start date?",
+            "Are you legally authorized to work in Canada?"
+          ];
+        }
       }
       return s;
     }
@@ -1031,7 +1057,15 @@ function defaultState() {
       gist_id: "",
       last_synced_at: "",
       budget_usd: 0,
-      usage_log: []
+      balance_usd: 0,
+      usage_log: [],
+      default_questions: [
+        "Tell us about yourself (3 sentences max)",
+        "Why are you interested in this role and this company?",
+        "What is your salary expectation? Use a CAD range starting around 130k.",
+        "What is your notice period and your earliest start date?",
+        "Are you legally authorized to work in Canada?"
+      ]
     },
     nextJobId: 1,
     nextBatchId: 1,
@@ -1072,7 +1106,9 @@ function serializeForSync(s) {
       haiku_model: s.settings.haiku_model,
       sonnet_model: s.settings.sonnet_model,
       last_synced_at: s.settings.last_synced_at,
-      budget_usd: s.settings.budget_usd
+      budget_usd: s.settings.budget_usd,
+      balance_usd: s.settings.balance_usd,
+      default_questions: s.settings.default_questions
       // api_key, gist_token, gist_id, usage_log stay per-device
     }
   };
@@ -1249,6 +1285,7 @@ function logUsage(action, costUSD, source) {
     state.settings.usage_log = state.settings.usage_log.slice(-2000);
   }
   saveState(true);
+  updateCostCounter(); // refresh "left" amount in header
 }
 
 async function askClaude(prompt, data = [], approxCostUSD = 0.005, model = "haiku", actionLabel = "general", maxTokens = 2000) {
@@ -1327,7 +1364,20 @@ async function askClaude(prompt, data = [], approxCostUSD = 0.005, model = "haik
 }
 
 function updateCostCounter() {
-  document.getElementById("costCounter").textContent = `$${sessionCost.toFixed(3)} session`;
+  const el = document.getElementById("costCounter");
+  if (!el) return;
+  const balance = state?.settings?.balance_usd || 0;
+  const log = state?.settings?.usage_log || [];
+  const lifetime = log.reduce((s, e) => s + (e.cost || 0), 0);
+  const fmt = n => "$" + (n < 0.01 ? n.toFixed(4) : n < 1 ? n.toFixed(3) : n.toFixed(2));
+  if (balance > 0) {
+    const left = Math.max(0, balance - lifetime);
+    el.textContent = `${fmt(sessionCost)} • ${fmt(left)} left`;
+    el.title = `Session: ${fmt(sessionCost)}\nLifetime: ${fmt(lifetime)}\nBalance: ${fmt(balance)}\nLeft: ${fmt(left)}`;
+  } else {
+    el.textContent = fmt(sessionCost);
+    el.title = "Session cost. Set your API balance in Settings → Usage to see remaining.";
+  }
 }
 
 // ============================================================================
@@ -1406,6 +1456,8 @@ function populateSettingsFields() {
   document.getElementById("s_gist_token").value = s.gist_token || "";
   document.getElementById("s_gist_id").value = s.gist_id || "";
   document.getElementById("s_budget").value = s.budget_usd || "";
+  document.getElementById("s_balance").value = s.balance_usd || "";
+  document.getElementById("p_default_questions").value = (s.default_questions || []).join("\n");
 }
 
 function renderSettings() {
@@ -1549,6 +1601,10 @@ function bindSetupInputs() {
   });
   document.getElementById("p_target_titles").addEventListener("input", e => {
     state.profile.target_titles = e.target.value.split(",").map(s => s.trim()).filter(Boolean); saveState();
+  });
+  document.getElementById("p_default_questions").addEventListener("input", e => {
+    state.settings.default_questions = e.target.value.split("\n").map(s => s.trim()).filter(Boolean);
+    saveState();
   });
   document.getElementById("c_comp_floor").addEventListener("input", e => {
     state.criteria.comp_floor = parseInt(e.target.value) || 0; saveState();
@@ -1729,9 +1785,12 @@ function renderJobQAHTML(j) {
   </div>
 
   <div class="card">
-    <div class="flex-between" style="margin-bottom:10px">
+    <div class="flex-between" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <h3 style="margin:0">Application Q&A</h3>
-      <button class="btn ghost" onclick="addCustomQA('${j.id}')">+ Add question</button>
+      <div class="row" style="gap:6px;flex:0 0 auto">
+        <button class="btn ghost" onclick="regenerateJobQA('${j.id}')">Regenerate</button>
+        <button class="btn ghost" onclick="addCustomQA('${j.id}')">+ Add question</button>
+      </div>
     </div>`;
   if (!qa.length) {
     html += `<div class="muted small">No Q&A yet. Run <b>Analyze batch</b> from this job's batch, or click <b>+ Add question</b> above to write your own.</div>`;
@@ -1801,6 +1860,58 @@ window.deleteQA = function(jobId, idx) {
   j.qa.splice(idx, 1);
   saveState();
   renderJobDetail(j, false);
+};
+
+window.regenerateJobQA = async function(jobId) {
+  const j = state.jobs.find(x => x.id === jobId);
+  if (!j) return;
+  const defaultQs = state.settings.default_questions || [];
+  if (!defaultQs.length) { alert("No default questions configured. Settings → Profile → 'Default application questions'."); return; }
+  if (!confirm(`Regenerate AI answers for the ${defaultQs.length} standard questions on this job?\n(Approx cost ~$0.01 via Claude. Your custom Q&A will be preserved.)`)) return;
+  const profile = state.profile;
+  const profileBlock = {
+    name: profile.full_name, location: profile.location,
+    current_role: profile.current_role, target_titles: profile.target_titles,
+    work_history: profile.work_history || [],
+    notice_period: profile.notice_period, work_authorization: profile.work_auth
+  };
+  const prompt = `You are helping ${profile.full_name || "the candidate"} prepare to apply to one job. Generate a tailored answer to each STANDARD QUESTION (2-4 sentences each, neutral professional tone, no exclamation marks). Personalize for this specific job.
+
+STANDARD QUESTIONS:
+${defaultQs.map((q, i) => `${i + 1}. ${q}`).join("\n")}
+
+CANDIDATE PROFILE: ${JSON.stringify(profileBlock, null, 2)}
+
+JOB: ${j.title} @ ${j.company || "?"}
+Location: ${(j.locations || []).join(", ")} (${j.work_arrangement || "?"})
+Tech: ${(j.tech_stack || []).join(", ")}
+Requirements: ${(j.requirements || []).slice(0, 8).join("; ")}
+Interview process: ${(j.interview_process || "—").slice(0, 400)}
+
+Return ONLY valid JSON: { "qa": [{ "question": "<verbatim question text>", "answer": "<answer>" }, ...] }`;
+  try {
+    showToast("Regenerating answers…");
+    const result = await askClaude(prompt, [], 0.012, "haiku", "Regenerate Q&A", 3000);
+    const text = typeof result === "string" ? result : (result?.content || result?.text || "");
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error("No JSON in response");
+    const parsed = JSON.parse(m[0]);
+    if (!Array.isArray(parsed.qa)) throw new Error("Bad response shape");
+    if (!Array.isArray(j.qa)) j.qa = [];
+    // Drop existing standard entries that match new questions; keep custom + edited
+    const newStandard = parsed.qa.map(item => ({
+      question: item.question, answer: item.answer, source: "standard", edited: false
+    }));
+    const customAndEdited = j.qa.filter(q => q.source === "custom" || q.edited);
+    // Filter out custom items duplicating new standard questions (by text)
+    const filteredKeep = customAndEdited.filter(c => !newStandard.some(n => n.question.trim().toLowerCase() === c.question.trim().toLowerCase()));
+    j.qa = [...newStandard, ...filteredKeep];
+    saveState();
+    showToast("Answers regenerated");
+    renderJobDetail(j, false);
+  } catch (e) {
+    alert("Regenerate failed: " + (e.message || e));
+  }
 };
 
 window.addCustomQA = function(jobId) {
@@ -2413,7 +2524,7 @@ document.getElementById("q_rescreen_all").addEventListener("click", () => {
 });
 document.getElementById("q_create_batch").addEventListener("click", () => {
   const ids = [...document.querySelectorAll(".q_chk:checked")].map(c => c.dataset.id);
-  if (!ids.length) { alert("Select at least one qualified job from the queue."); return; }
+  if (!ids.length) { alert("Select at least one job from the queue first."); return; }
   const id = "batch_" + String(state.nextBatchId++).padStart(3, "0");
   const batch = {
     id, created_at: nowISO(), status: "draft",
@@ -2425,7 +2536,47 @@ document.getElementById("q_create_batch").addEventListener("click", () => {
   saveState();
   showTab("batches");
   showBatchDetail(id);
+  // Offer to auto-generate Q&A for the new batch
+  setTimeout(() => offerAutoAnalyze(batch), 200);
 });
+
+document.getElementById("q_add_to_batch").addEventListener("click", () => {
+  const ids = [...document.querySelectorAll(".q_chk:checked")].map(c => c.dataset.id);
+  if (!ids.length) { alert("Select at least one job from the queue first."); return; }
+  // Eligible target batches: drafts or analyzed (not yet submitted)
+  const candidates = state.batches.filter(b => b.status === "draft" || b.status === "analyzed");
+  if (!candidates.length) { alert("No existing batches to add to. Use 'Create batch' first."); return; }
+  // Build a numbered picker
+  const picker = candidates.slice().reverse().map((b, i) => `${i + 1}. ${b.id} — ${b.job_ids.length} job(s), ${b.status}`).join("\n");
+  const choice = prompt(`Add ${ids.length} selected job(s) to which batch?\n\n${picker}\n\nEnter number 1–${candidates.length}:`);
+  if (!choice) return;
+  const idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= candidates.length) { alert("Invalid choice."); return; }
+  const target = candidates.slice().reverse()[idx];
+  let added = 0;
+  ids.forEach(jid => {
+    if (target.job_ids.includes(jid)) return;
+    target.job_ids.push(jid);
+    const j = state.jobs.find(j => j.id === jid);
+    if (j) { j.status = "batched"; j.batch_id = target.id; }
+    added++;
+  });
+  saveState();
+  showToast(`Added ${added} job(s) to ${target.id}`, 3000);
+  renderQueue();
+  // Offer to auto-generate Q&A for the freshly-added jobs
+  setTimeout(() => offerAutoAnalyze(target), 200);
+});
+
+// Helper used after batch creation / add-to-batch: prompt to run analyzer
+function offerAutoAnalyze(batch) {
+  if (!batch || !batch.job_ids?.length) return;
+  // Estimate cost: ~$0.005-0.015 per job for Q&A on Haiku
+  const est = batch.job_ids.length * 0.012;
+  const msg = `Generate answers to your ${state.settings.default_questions?.length || 5} standard application questions for the ${batch.job_ids.length} job(s) in this batch?\n\nApprox cost: $${est.toFixed(2)} via Claude.`;
+  if (!confirm(msg)) return;
+  runBatchAnalyzer(batch);
+}
 
 // ============================================================================
 // Job detail view (inside Queue tab — can also be opened from Batches)
@@ -2645,6 +2796,9 @@ Return JSON only.`;
         <button class="icon-btn" id="d_edit" title="Edit job" aria-label="Edit job">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
         </button>
+        <button class="icon-btn" id="d_psdate" title="Set phone-screen date" aria-label="Set phone-screen date">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+        </button>
         ${j.url ? `<a class="icon-btn" href="${escapeHtml(j.url)}" target="_blank" rel="noopener" title="Open source" aria-label="Open source">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
         </a>` : ""}
@@ -2708,6 +2862,16 @@ Return JSON only.`;
     renderJobDetail(j, false);
   });
   document.getElementById("d_edit").addEventListener("click", () => renderJobDetail(j, true));
+  document.getElementById("d_psdate").addEventListener("click", () => {
+    const d = prompt("Phone screen date (YYYY-MM-DD):", j.phone_screen_at?.slice(0, 10) || todayISO());
+    if (!d) return;
+    j.phone_screen_at = d + "T00:00:00.000Z";
+    if (j.status === "batched" || j.status === "submitted") j.status = "phonescreen";
+    if (!j.response_at) j.response_at = nowISO();
+    saveState();
+    renderJobDetail(j, false);
+    showToast("Phone screen date set");
+  });
   const copyBtn = document.getElementById("d_copy_raw");
   if (copyBtn) {
     copyBtn.addEventListener("click", async (e) => {
@@ -2749,18 +2913,103 @@ function renderBatches() {
     const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
     const submitted = jobs.filter(j => ["submitted","phonescreen","onsite","offer","rejected_by_co"].includes(j.status)).length;
     const screens = jobs.filter(j => ["phonescreen","onsite","offer"].includes(j.status)).length;
-    const item = document.createElement("div");
-    item.className = "list-item";
-    item.innerHTML = `
+    const card = document.createElement("div");
+    card.className = "list-item batch-list-card";
+    card.style.flexDirection = "column";
+    card.style.alignItems = "stretch";
+    card.style.cursor = "pointer";
+    card.dataset.batchId = b.id;
+    card.innerHTML = `
       <div class="grow">
         <div>${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></div>
         <div class="muted small">${jobs.length} job(s) · ${submitted} submitted · ${screens} phone screen(s) · Resume: ${escapeHtml(b.resume_version_id || "not set")}</div>
       </div>
-      <button class="btn ghost b_open" data-id="${b.id}">Open</button>
+      <div class="row batch-actions" style="gap:4px;margin-top:10px;margin-left:-8px;flex-wrap:wrap" onclick="event.stopPropagation()">
+        <button class="icon-btn b_act_view" data-id="${b.id}" title="View" aria-label="View">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        </button>
+        <button class="icon-btn b_act_edit" data-id="${b.id}" title="Edit (manage jobs)" aria-label="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+        </button>
+        <button class="icon-btn b_act_ats" data-id="${b.id}" title="Run ATS check" aria-label="Run ATS check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+        <button class="icon-btn b_act_analyze" data-id="${b.id}" title="Analyze batch (generate Q&A)" aria-label="Analyze batch" ${b.is_analyzing ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.091 3.091zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
+        </button>
+        <button class="icon-btn b_act_submit" data-id="${b.id}" title="Mark batch as submitted" aria-label="Mark submitted">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+        </button>
+        <button class="icon-btn danger b_act_delete" data-id="${b.id}" title="Delete batch (move jobs back to queue)" aria-label="Delete batch" style="margin-left:auto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+        </button>
+      </div>
     `;
-    list.appendChild(item);
+    // Card body click → open (View) — but only if click wasn't on an action button
+    card.addEventListener("click", e => {
+      if (e.target.closest("button")) return;
+      showBatchDetail(b.id);
+    });
+    list.appendChild(card);
   });
-  list.querySelectorAll(".b_open").forEach(b => b.addEventListener("click", e => showBatchDetail(e.target.dataset.id)));
+  // Wire action buttons
+  list.querySelectorAll(".b_act_view").forEach(el => el.addEventListener("click", e => {
+    e.stopPropagation(); showBatchDetail(e.currentTarget.dataset.id);
+  }));
+  list.querySelectorAll(".b_act_edit").forEach(el => el.addEventListener("click", e => {
+    e.stopPropagation();
+    // Edit = open detail (jobs section is where add/remove lives)
+    showBatchDetail(e.currentTarget.dataset.id);
+  }));
+  list.querySelectorAll(".b_act_ats").forEach(el => el.addEventListener("click", e => {
+    e.stopPropagation();
+    const batch = state.batches.find(x => x.id === e.currentTarget.dataset.id);
+    if (!batch) return;
+    if (!batch.resume_version_id) {
+      alert("No resume version set on this batch. Opening the batch — pick one first.");
+      showBatchDetail(batch.id);
+      return;
+    }
+    showBatchDetail(batch.id);
+    setTimeout(() => runATSCheck(batch), 100);
+  }));
+  list.querySelectorAll(".b_act_analyze").forEach(el => el.addEventListener("click", e => {
+    e.stopPropagation();
+    const batch = state.batches.find(x => x.id === e.currentTarget.dataset.id);
+    if (!batch) return;
+    if (!batch.job_ids?.length) { alert("Batch has no jobs."); return; }
+    showBatchDetail(batch.id);
+    setTimeout(() => runBatchAnalyzer(batch), 100);
+  }));
+  list.querySelectorAll(".b_act_submit").forEach(el => el.addEventListener("click", e => {
+    e.stopPropagation();
+    const batch = state.batches.find(x => x.id === e.currentTarget.dataset.id);
+    if (!batch) return;
+    const jobsInBatch = batch.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
+    const pending = jobsInBatch.filter(j => j.status === "batched");
+    if (!confirm(`Mark all ${pending.length} pending job(s) in ${batch.id} as submitted?`)) return;
+    const now = nowISO();
+    pending.forEach(j => { j.status = "submitted"; j.applied_at = now; });
+    batch.status = "submitted"; batch.submitted_at = now;
+    saveState();
+    showToast(`Batch ${batch.id} marked submitted`);
+    renderBatches();
+  }));
+  list.querySelectorAll(".b_act_delete").forEach(el => el.addEventListener("click", e => {
+    e.stopPropagation();
+    const batch = state.batches.find(x => x.id === e.currentTarget.dataset.id);
+    if (!batch) return;
+    const count = batch.job_ids.length;
+    if (!confirm(`Delete ${batch.id} and move its ${count} job(s) back to the queue?\n\nThe jobs themselves are NOT deleted — they return to "queued" status. Q&A and ATS results stored on each job remain.`)) return;
+    batch.job_ids.forEach(jid => {
+      const j = state.jobs.find(x => x.id === jid);
+      if (j) { j.batch_id = null; j.status = "queued"; }
+    });
+    state.batches = state.batches.filter(x => x.id !== batch.id);
+    saveState();
+    showToast(`Batch deleted. ${count} job(s) returned to queue.`, 3000);
+    renderBatches();
+  }));
 }
 
 function showBatchDetail(batchId) {
@@ -2870,9 +3119,7 @@ function renderBatchJobs(b) {
             ${qaCount > 0 ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">${qaCount} Q&A</span>` : ""}
           </div>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center" onclick="event.stopPropagation()">
-            <select class="j_status" data-id="${j.id}" style="flex:0 0 auto;max-width:180px">${statusOpts}</select>
-            <button class="btn ghost j_psdate" data-id="${j.id}" style="flex:0 0 auto">Phone screen date</button>
-            <button class="btn ghost j_addq" data-id="${j.id}" style="flex:0 0 auto">+ Custom Q</button>
+            <select class="j_status" data-id="${j.id}" style="flex:0 0 auto;max-width:200px">${statusOpts}</select>
           </div>
           <div class="row" style="gap:4px;margin-top:8px;margin-left:-8px" onclick="event.stopPropagation()">
             <button class="icon-btn j_edit" data-id="${j.id}" title="Edit job" aria-label="Edit job">
@@ -2904,18 +3151,7 @@ function renderBatchJobs(b) {
     if (["phonescreen","onsite","offer","rejected_by_co"].includes(j.status) && !j.response_at) j.response_at = nowISO();
     saveState(); renderBatchJobs(b);
   }));
-  root.querySelectorAll(".j_psdate").forEach(btn => btn.addEventListener("click", e => {
-    e.stopPropagation();
-    const j = state.jobs.find(x => x.id === e.target.dataset.id);
-    if (!j) return;
-    const d = prompt("Phone screen date (YYYY-MM-DD):", j.phone_screen_at?.slice(0, 10) || todayISO());
-    if (d) { j.phone_screen_at = d + "T00:00:00.000Z"; if (j.status === "batched" || j.status === "submitted") j.status = "phonescreen"; saveState(); renderBatchJobs(b); }
-  }));
-  root.querySelectorAll(".j_addq").forEach(btn => btn.addEventListener("click", e => {
-    e.stopPropagation();
-    window.addCustomQA(e.currentTarget.dataset.id);
-    renderBatchJobs(b); // refresh Q&A count
-  }));
+  // (Phone-screen-date and +Custom-Q buttons now live on the job detail page.)
   root.querySelectorAll(".j_edit").forEach(btn => btn.addEventListener("click", e => {
     e.stopPropagation();
     showJobDetail(e.currentTarget.dataset.id, { type: "batch", batchId: b.id });
@@ -3027,18 +3263,13 @@ async function runBatchAnalyzer(b) {
       notice_period: profile.notice_period,
       work_authorization: profile.work_auth
     };
+    const defaultQs = state.settings.default_questions || [];
     const prompt = `You are helping Jerry Lau, a senior frontend engineer based in Toronto, prepare application packets for a batch of qualified jobs.
 
-For EACH job in the batch, generate the TOP 5 application questions Jerry is most likely to be asked, with Jerry's tailored answers (2-4 sentences each, neutral professional tone, no exclamation marks). Pick the 5 most likely questions per job from common ones, plus any job-specific questions implied by the JD's interview process. Common universal questions to consider:
-- Tell us about yourself (3 sentences max)
-- Why are you interested in this role / [Company]?
-- What are your salary expectations? (use a CAD range starting ~130k)
-- What is your notice period and earliest start date?
-- Are you legally authorized to work in Canada?
-- Describe a recent frontend project you led
-- How do you approach accessibility?
-- Describe your experience with [specific tech mentioned in JD]
-- What's your preferred work arrangement?
+For EACH job in the batch, generate a tailored answer to EACH of these standard questions (2-4 sentences each, neutral professional tone, no exclamation marks). Always include all of them. Personalize per job (mention the company, tie to JD when relevant).
+
+STANDARD QUESTIONS:
+${defaultQs.map((q, i) => `${i + 1}. ${q}`).join("\n")}
 
 If a job has additional user-supplied custom questions, include those in the qa list too (mark source: "custom").
 
@@ -3396,6 +3627,12 @@ document.getElementById("s_budget").addEventListener("input", e => {
   state.settings.budget_usd = parseFloat(e.target.value) || 0;
   saveState();
   renderUsageSummary();
+});
+document.getElementById("s_balance").addEventListener("input", e => {
+  state.settings.balance_usd = parseFloat(e.target.value) || 0;
+  saveState();
+  renderUsageSummary();
+  updateCostCounter();
 });
 document.getElementById("settings_back_btn").addEventListener("click", showSettingsMenu);
 document.getElementById("s_clear_btn").addEventListener("click", () => {
