@@ -1216,11 +1216,11 @@ function fitsSets(job) {
   const all = job.screening_all || {};
   return (state.criteria_sets || []).filter(cs => all[cs.id] && all[cs.id].qualified);
 }
-// Fit strength for ranking — driven by the match %, with a small target-company
-// bonus and a tiny dealbreaker tiebreaker (favors fewer dealbreakers).
+// Fit strength for ranking — the graded match % (already factors target company,
+// comp, stack, remote, FE), with a tiny dealbreaker tiebreaker (favors fewer).
 function fitScore(r) {
   if (!r) return -Infinity;
-  return (r.score || 0) + (r.target_match?.length ? 5 : 0) - (r.dealbreakers || 0) * 0.01;
+  return (r.score || 0) - (r.dealbreakers || 0) * 0.01;
 }
 // All sets ranked best-first: qualified sets before non-qualified, each group by fitScore desc.
 function rankedFitSets(job) {
@@ -1243,10 +1243,11 @@ function bestFitSet(job) {
 (state.jobs || []).forEach(j => {
   const hasContent = (j.raw_text && j.raw_text.length > 50) || (j.tech_stack || []).length || (j.requirements || []).length;
   if (!hasContent) return;
-  if (!j.screening_all || (j.screening && j.screening.score == null)) {
+  const stale = !j.screening || j.screening.score_v !== 2;
+  if (!j.screening_all || stale) {
     j.screening_all = screenJobAllSets(j);
-    const id = j.screened_against;
-    if (!j.screening || j.screening.score == null) {
+    if (stale) {
+      const id = j.screened_against;
       j.screening = (id && j.screening_all[id]) || j.screening_all[(activeCriteria() || {}).id] || j.screening;
     }
   }
@@ -2849,6 +2850,10 @@ document.getElementById("j_save_btn").addEventListener("click", () => {
   showToast(msg, 3000);
   document.getElementById("j_clear_btn").click();
   backToQueueFromIntake();
+  // Screening triggers an AI fit pass (persona/culture judgment, all sets) when there's JD text
+  if ((job.raw_text || "").trim().length >= 50) {
+    runAiFitSingle(job, () => renderQueue());
+  }
 });
 
 document.getElementById("j_quicksave_btn").addEventListener("click", () => {
@@ -2868,6 +2873,19 @@ const NEG_WINDOW = 60;
 function containsAny(text, needles) {
   const lower = text.toLowerCase();
   return (needles || []).filter(n => lower.includes(n.toLowerCase()));
+}
+
+// Whole-word/phrase match — avoids substring false positives like "Ada" inside "Canada".
+// Boundaries are any non-alphanumeric char (so "Canadian Tire", "EY", "1Password" all work).
+function containsWholeWord(text, term) {
+  if (!term) return false;
+  const esc = term.trim().toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!esc) return false;
+  return new RegExp(`(?:^|[^a-z0-9])${esc}(?:[^a-z0-9]|$)`, "i").test(text.toLowerCase());
+}
+// Filter a list of company/keyword names to those present as whole words in text.
+function containsAnyWholeWord(text, needles) {
+  return (needles || []).filter(n => containsWholeWord(text, n));
 }
 
 function containsAnyNegationAware(text, needles) {
@@ -2937,7 +2955,7 @@ function screenJob(job, c) {
   h = containsAny(full, c.kw_excluded);
   if (h.length) dbFail(`excluded keyword: ${h.join(", ")}`);
 
-  h = containsAny(company + " " + full, c.co_excluded);
+  h = containsAnyWholeWord(company + " " + full, c.co_excluded);
   if (h.length) dbFail(`excluded company: ${h.join(", ")}`);
 
   // Frontend / Backend split (a must-have only when a threshold is set)
@@ -2951,20 +2969,137 @@ function screenJob(job, c) {
     }
   }
 
-  const target_match = (c.target_companies || []).filter(t => (company + " " + full).toLowerCase().includes(t.toLowerCase()));
+  const target_match = containsAnyWholeWord(company + " " + full, c.target_companies);
 
-  // Match %: must-have coverage, with each dealbreaker hit weighted as 2 failed items.
-  // A fully-qualified job (all must-haves, no dealbreakers) = 100%. A target-company
-  // hit nudges sub-100 scores up slightly so strong-fit roles rank a touch higher.
-  const denom = posTotal + 2 * dbHits;
-  let score = denom ? Math.round((100 * posPass) / denom) : 0;
-  if (target_match.length && score < 100) score = Math.min(100, score + 5);
+  // ---- Graded fit score (0-100) — spreads QUALIFIED jobs apart instead of all-100 ----
+  // Continuous components so two passing jobs rarely tie: comp headroom above floor,
+  // depth of stack overlap, remote preference, frontend focus, target-company match.
+  const senOK = containsAny(title, c.title_seniority).length ? 1 : 0;
+  const roleOK = containsAny(title, c.title_role).length ? 1 : 0;
+  const stackComp = Math.min(containsAny(full, c.stack_any).length / 3, 1);
+  let compComp = 0.5; // unknown comp = neutral
+  if (c.comp_floor) {
+    const cmax = job.salary_max || job.salary_min;
+    if (cmax) {
+      const cadMax = (job.currency || "CAD").toUpperCase() === "USD" ? Math.round(cmax * 1.35) : cmax;
+      compComp = Math.max(0, Math.min(1, (cadMax / c.comp_floor - 1) / 0.5)); // 0 at floor → 1 at +50%
+    }
+  }
+  const arr = (job.work_arrangement || "").toLowerCase();
+  const arrComp = arr.includes("remote") ? 1 : arr.includes("hybrid") ? 0.6 : (arr.includes("site") || arr.includes("office")) ? 0.3 : 0.5;
+  const feComp = job.fe_percent != null ? Math.max(0, Math.min(1, job.fe_percent / 100)) : 0.6;
+  const targetComp = target_match.length ? 1 : 0;
+  const rawFit = 8 * senOK + 8 * roleOK + 16 * stackComp + 22 * compComp + 16 * arrComp + 15 * feComp + 15 * targetComp; // 0..100
+
+  const qualified = dbHits === 0 && posPass === posTotal;
+  // Qualified jobs land 50-100 (graded by quality); anything that fails a hard gate is damped to 0-49.
+  const score = qualified ? Math.max(50, Math.round(rawFit)) : Math.min(49, Math.round(rawFit * 0.5));
 
   return {
-    qualified: dbHits === 0 && posPass === posTotal,
-    reasons_pass, reasons_fail, target_match,
-    score, pos_total: posTotal, pos_pass: posPass, dealbreakers: dbHits
+    qualified, reasons_pass, reasons_fail, target_match,
+    score, score_v: 2, pos_total: posTotal, pos_pass: posPass, dealbreakers: dbHits
   };
+}
+
+// ============================================================================
+// AI FIT — qualitative judgment (persona/culture/nuance) the keyword screen can't do
+// ============================================================================
+// Assess one job against ONE criteria set's target persona. Returns a result object (no storage).
+async function aiAssessOneSet(job, cs) {
+  const raw = (job.raw_text || "").trim();
+  if (raw.length < 50) throw new Error("JD text too short — paste the full posting first");
+  const persona = (cs && cs.target_persona) ? cs.target_persona : "(no target persona defined for this set)";
+  const prompt = `You assess how well a job matches a candidate's specific search profile. Focus on NUANCE a keyword filter misses: company type & culture, role substance, true seniority, and alignment with the target profile below. The candidate is a senior frontend engineer in Toronto who prefers stable, remote-friendly employers and avoids on-call / heavy production-support roles.
+
+Target profile for this search ("${cs ? cs.name : ""}"): ${persona}
+
+Return ONLY valid JSON: {"fit": <integer 0-100>, "rationale": "<one or two sentences naming the strongest fit and misfit signals>"}. 100 = textbook match for THIS profile; 50 = generic senior FE role with no strong signal either way; 0 = clearly wrong company type or role. Judge profile alignment, not merely whether it is a frontend job.
+
+JOB POSTING:
+"""
+${raw.slice(0, 6000)}
+"""`;
+  const result = await askClaude(prompt, [], 0.005, "haiku", "AI fit");
+  const text = typeof result === "string" ? result : (result?.content || JSON.stringify(result));
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("No JSON in AI response");
+  const data = JSON.parse(m[0]);
+  const fit = Math.max(0, Math.min(100, parseInt(data.fit) || 0));
+  return { score: fit, rationale: String(data.rationale || ""), at: nowISO(), criteria_id: cs ? cs.id : null, criteria_name: cs ? cs.name : "" };
+}
+// Assess a job against EVERY criteria set. Stores per-set results in job.ai_fit_all,
+// and the best-scoring set as job.ai_fit (used for the queue chip & ranking).
+async function aiFitForJob(job) {
+  const sets = state.criteria_sets || [];
+  if (!sets.length) throw new Error("No criteria sets defined");
+  job.ai_fit_all = job.ai_fit_all || {};
+  let okAny = false, lastErr = null;
+  for (const cs of sets) {
+    try { job.ai_fit_all[cs.id] = await aiAssessOneSet(job, cs); okAny = true; }
+    catch (e) { lastErr = e; }
+  }
+  if (!okAny) throw lastErr || new Error("AI fit failed");
+  // headline = best-scoring set among those assessed
+  const entries = sets.map(cs => job.ai_fit_all[cs.id]).filter(Boolean);
+  job.ai_fit = entries.slice().sort((a, b) => (b.score || 0) - (a.score || 0))[0] || null;
+  return job.ai_fit;
+}
+// Score one job across all sets + refresh a view when done.
+async function runAiFitSingle(job, rerender) {
+  showToast("Scoring fit across all sets with Claude…", 2200);
+  try { await aiFitForJob(job); saveState(); }
+  catch (e) { showToast("AI fit failed: " + e.message, 3500); }
+  if (rerender) rerender();
+}
+// Confirm before spending tokens on a bulk run (n jobs × every criteria set).
+function confirmAiCost(n) {
+  if (!n) return false;
+  const sets = (state.criteria_sets || []).length || 1;
+  const calls = n * sets;
+  return confirm(`Also run AI fit on ${n} job(s) × ${sets} criteria set(s) = ${calls} Claude call(s) (~$${(calls * 0.005).toFixed(3)})?\n\n(The instant keyword score is already updated — this adds Claude's persona/culture judgment for each set.)`);
+}
+// Score many jobs (each across all sets) sequentially.
+async function runAiFitBulk(jobs) {
+  let ok = 0, bad = 0;
+  for (const j of jobs) {
+    try { await aiFitForJob(j); ok++; }
+    catch (e) { bad++; }
+    saveState();
+  }
+  showToast(`AI fit complete: ${ok} job(s) scored${bad ? `, ${bad} skipped/failed` : ""}.`, 3500);
+  if (typeof renderQueue === "function") renderQueue();
+}
+// Read-only AI fit card for the job detail view — Claude's judgment per criteria set.
+function aiFitCardHTML(j) {
+  const sets = state.criteria_sets || [];
+  const all = j.ai_fit_all || {};
+  const assigned = criteriaForJob(j);
+  const cost = (sets.length * 0.005).toFixed(3);
+  const ranked = sets.map(cs => ({ cs, r: all[cs.id] })).filter(x => x.r).sort((a, b) => (b.r.score || 0) - (a.r.score || 0));
+  let body;
+  if (ranked.length) {
+    const best = ranked[0];
+    body = `
+      <div class="small" style="margin-bottom:8px"><b style="color:var(--accent)">★ Best fit (AI): ${escapeHtml(best.cs.name)} — ${best.r.score}%</b></div>
+      ${ranked.map(({ cs, r }) => {
+        const isBest = cs.id === best.cs.id;
+        const isAssigned = assigned && cs.id === assigned.id;
+        return `<div style="border-top:1px solid var(--line);padding:8px 0">
+          <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700">${isBest ? "★ " : ""}${escapeHtml(cs.name)}${isAssigned ? " ●" : ""}</span>
+            <span style="font-size:18px;font-weight:800;color:var(--accent)">${r.score}%</span>
+            <span class="muted small">${escapeHtml(String(r.at || "").slice(0, 10))}</span>
+          </div>
+          ${r.rationale ? `<div class="small" style="margin-top:4px;line-height:1.5">${escapeHtml(r.rationale)}</div>` : ""}
+        </div>`;
+      }).join("")}
+      <div class="small muted" style="margin-top:8px">★ best AI fit · ● currently assigned set</div>
+      <div class="row" style="margin-top:10px"><button class="btn ghost" id="d_aifit_btn">Re-assess all sets with Claude (~$${cost})</button></div>`;
+  } else {
+    body = `<div class="muted small">The match % above is keyword-based. AI fit asks Claude to judge company type, culture, and target-persona alignment for <b>each criteria set</b> — the nuance keywords miss.</div>
+      <div class="row" style="margin-top:10px"><button class="btn ghost" id="d_aifit_btn">Run AI fit on all sets (~$${cost})</button></div>`;
+  }
+  return `<div class="card"><h3>AI fit assessment</h3>${body}</div>`;
 }
 
 // ============================================================================
@@ -3033,6 +3168,7 @@ function renderQueue() {
           <div class="meta">${metaBits.join(" · ")}</div>
           <div class="tags">
             ${screening}
+            ${j.ai_fit ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)" title="Claude's best AI fit: ${escapeHtml(j.ai_fit.criteria_name || "")} (open job for all sets)">AI ${j.ai_fit.score}%</span>` : ""}
             ${target}
             <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
           </div>
@@ -3091,6 +3227,8 @@ document.getElementById("q_criteria_select").addEventListener("change", e => {
   saveState();
   showToast(`Active set: ${cs.name}. Re-screened ${queued.length} queued jobs (+${q} / −${r}).`, 3500);
   renderQueue();
+  const scorable = queued.filter(j => (j.raw_text || "").trim().length >= 50);
+  if (scorable.length && confirmAiCost(scorable.length)) runAiFitBulk(scorable);
 });
 document.getElementById("q_select_all").addEventListener("click", () => {
   const boxes = document.querySelectorAll(".q_chk");
@@ -3114,6 +3252,8 @@ document.getElementById("q_rescreen_all").addEventListener("click", () => {
   saveState();
   showToast(`Done. +${flippedToQualified} newly qualified, -${flippedToRejected} newly rejected.`, 4000);
   renderQueue();
+  const scorable = state.jobs.filter(j => (j.raw_text || "").trim().length >= 50);
+  if (scorable.length && confirmAiCost(scorable.length)) runAiFitBulk(scorable);
 });
 document.getElementById("q_create_batch").addEventListener("click", () => {
   const ids = [...document.querySelectorAll(".q_chk:checked")].map(c => c.dataset.id);
@@ -3249,7 +3389,7 @@ function renderJobDetail(j, editMode) {
         return `<span class="tag ${ok ? 'qualified' : 'rejected'}" title="${ok ? 'Qualifies' : 'Does not qualify'} under ${escapeHtml(cs.name)}${r ? ' — ' + r.pos_pass + '/' + r.pos_total + ' must-haves, ' + r.dealbreakers + ' dealbreaker(s)' : ''}">${isBest ? '★ ' : ''}${ok ? '✓' : '✗'} ${escapeHtml(cs.name)}${pct}${isAssigned ? ' ●' : ''}</span>`;
       }).join("")}
     </div>
-    <div class="small muted" style="margin-bottom:12px">Match % = share of must-have criteria met (dealbreakers lower it & veto qualification). ★ best fit · ● current set</div>` : "";
+    <div class="small muted" style="margin-bottom:12px">Match % = graded keyword fit (comp vs floor, stack depth, remote, FE focus, target company). 50+ = qualified; below 50 failed a hard gate. ★ best fit · ● current set</div>` : "";
 
   if (editMode) {
     // ----- EDIT MODE -----
@@ -3463,6 +3603,8 @@ Return JSON only.`;
       ${(screening.reasons_pass || []).length === 0 && (screening.reasons_fail || []).length === 0 ? `<div class="muted small">No screening run yet. Click Re-screen.</div>` : ""}
     </div>
 
+    ${aiFitCardHTML(j)}
+
     ${renderJobQAHTML(j)}
 
     ${j.notes ? `<div class="card"><h3>Notes</h3><div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(j.notes)}</div></div>` : ""}
@@ -3487,8 +3629,12 @@ Return JSON only.`;
     const after = j.screening.qualified;
     showToast(after === before ? `Re-screened (${cs.name}): ${after ? "Qualified" : "Rejected"}` : (after ? "✓ Now qualified!" : "✗ Now rejected"));
     renderJobDetail(j, false);
+    if ((j.raw_text || "").trim().length >= 50) {
+      runAiFitSingle(j, () => renderJobDetail(j, false));
+    }
   });
   document.getElementById("d_edit").addEventListener("click", () => renderJobDetail(j, true));
+  document.getElementById("d_aifit_btn")?.addEventListener("click", () => runAiFitSingle(j, () => renderJobDetail(j, false)));
   document.getElementById("d_psdate").addEventListener("click", () => {
     const d = prompt("Phone screen date (YYYY-MM-DD):", j.phone_screen_at?.slice(0, 10) || todayISO());
     if (!d) return;
@@ -3720,6 +3866,13 @@ function showBatchDetail(batchId) {
         rescreenJob(j, cs.id);
       });
       showToast(`Batch re-screened against ${cs.name}`);
+      saveState();
+      renderBatchJobs(b);
+      const scorable = b.job_ids.map(id => state.jobs.find(x => x.id === id)).filter(j => j && (j.raw_text || "").trim().length >= 50);
+      if (scorable.length && confirmAiCost(scorable.length)) {
+        runAiFitBulk(scorable).then(() => renderBatchJobs(b));
+      }
+      return;
     }
     saveState();
     renderBatchJobs(b);
