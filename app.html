@@ -3912,7 +3912,7 @@ function showGenerateResumeModal(versionId) {
           <button class="btn ghost" id="g_dl_html">HTML</button>
           <button class="btn ghost" id="g_print">Save as PDF (print)</button>
         </div>
-        <p class="small muted" style="margin-top:8px">On iPhone: tap "Save as PDF" → in the print preview, tap share → <b>Save to Files</b> → choose iCloud Drive folder.</p>
+        <p class="small muted" style="margin-top:8px">On iPhone: <b>Save as PDF</b> opens the iOS print sheet (the app stays open behind it). In the preview, tap the <b>share</b> icon → <b>Save to Files</b> → iCloud Drive. The PDF has no date/URL/page-number headers. If printing acts up on your device, use <b>Word (.doc)</b> — it opens in Pages where you can export a clean PDF.</p>
       </div>
       <button class="btn ghost" id="g_close" style="width:100%;margin-top:18px;justify-content:center">Close</button>
     </div>
@@ -3920,7 +3920,16 @@ function showGenerateResumeModal(versionId) {
   const modal = document.getElementById("help_modal");
   modal.querySelector(".lock-card").outerHTML = html;
   modal.style.display = "flex";
-  if (v.generated_html) document.getElementById("g_preview").innerHTML = `<details><summary class="muted small">Preview</summary><iframe srcdoc="${escapeHtml(v.generated_html)}" style="width:100%;min-height:300px;border:1px solid var(--line);border-radius:8px;margin-top:8px"></iframe></details>`;
+  if (v.generated_html) {
+    document.getElementById("g_preview").innerHTML = `
+      <details open>
+        <summary class="muted small">Preview (scaled to fit)</summary>
+        <div id="g_preview_wrap" style="overflow:hidden;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff">
+          <iframe id="g_preview_frame" srcdoc="${escapeHtml(v.generated_html)}" scrolling="no" style="border:0;display:block;background:#fff"></iframe>
+        </div>
+      </details>`;
+    requestAnimationFrame(scaleResumePreview);
+  }
 
   document.getElementById("g_close").addEventListener("click", () => { modal.style.display = "none"; modal.innerHTML = `<div class="lock-card"></div>`; });
   document.getElementById("g_run").addEventListener("click", () => regenerateResume(v));
@@ -3937,7 +3946,12 @@ async function regenerateResume(v) {
     // Resolve the template by id (with fallback to inline v.template or default)
     const tplObj = state.templates.find(t => t.id === v.template_id) || state.templates[0];
     const tmpl = tplObj?.description || v.template || "Single-column classic resume layout with clean serif headings and one page.";
-    const prompt = `Format this resume content according to the template instructions. Return ONLY a complete HTML document (no markdown, no commentary) with inline <style> for the layout. The HTML must be print-friendly (A4/Letter), include @page CSS for margins, and use professional typography. Keep all content verbatim — do NOT add or remove information, only reformat the layout per the template.
+    const prompt = `Format this resume content according to the template instructions. Return ONLY a complete HTML document (no markdown, no commentary) with inline <style> for the layout. Keep all content verbatim — do NOT add or remove information, only reformat the layout per the template.
+
+CRITICAL PRINT CSS (so the exported PDF has NO browser headers/footers like date, URL, or page numbers):
+- Use exactly: @page { size: A4; margin: 0; }
+- Do NOT put margins on @page. Instead put the page margins as PADDING on the body, e.g. body { padding: 18mm 16mm; box-sizing: border-box; }
+- Add to body: -webkit-print-color-adjust: exact; print-color-adjust: exact;  (so the orange section headers print in color)
 
 TEMPLATE INSTRUCTIONS:
 ${tmpl}
@@ -3984,15 +3998,66 @@ function downloadAsDoc(filename, htmlBody) {
   URL.revokeObjectURL(url);
 }
 
+// Scale the resume preview iframe to fit the modal width (A4 page scaled down)
+function scaleResumePreview() {
+  const wrap = document.getElementById("g_preview_wrap");
+  const frame = document.getElementById("g_preview_frame");
+  if (!wrap || !frame) return;
+  const DOC_W = 794;   // A4 width @96dpi (px)
+  const DOC_H = 1123;  // A4 height @96dpi (px)
+  const scale = Math.min(1, wrap.clientWidth / DOC_W);
+  frame.style.width = DOC_W + "px";
+  frame.style.height = DOC_H + "px";
+  frame.style.transformOrigin = "top left";
+  frame.style.transform = `scale(${scale})`;
+  wrap.style.height = (DOC_H * scale) + "px";
+}
+
+// CSS that suppresses Safari's print headers/footers (date, URL, page numbers)
+// by zeroing @page margins and moving margins to body padding.
+const PRINT_RESET_CSS = `<style id="__print_reset">
+@page { size: A4; margin: 0; }
+@media print {
+  html, body { margin: 0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  /* Guarantee printable margins via padding so content isn't edge-to-edge */
+  body { padding: 16mm 15mm !important; box-sizing: border-box !important; }
+}
+</style>`;
+
+function injectPrintReset(html) {
+  if (/<\/head>/i.test(html)) return html.replace(/<\/head>/i, PRINT_RESET_CSS + "</head>");
+  if (/<body[^>]*>/i.test(html)) return html.replace(/(<body[^>]*>)/i, PRINT_RESET_CSS + "$1");
+  return PRINT_RESET_CSS + html;
+}
+
+// Print using a HIDDEN iframe so the app screen is never replaced (critical for
+// home-screen / standalone PWA mode where there's no browser back button).
 function printHtml(html) {
-  // Open the generated HTML in a new window and trigger print
-  const w = window.open("", "_blank");
-  if (!w) { alert("Pop-up blocked. Enable popups for this site."); return; }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  // Give the new window a moment to render
-  setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 300);
+  const doc = injectPrintReset(html);
+  let frame = document.getElementById("__print_frame");
+  if (frame) frame.remove();
+  frame = document.createElement("iframe");
+  frame.id = "__print_frame";
+  frame.setAttribute("aria-hidden", "true");
+  // Off-screen but full A4 size so content lays out and renders before printing
+  frame.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;";
+  document.body.appendChild(frame);
+  const run = () => {
+    try {
+      const cw = frame.contentWindow;
+      cw.focus();
+      cw.print();
+    } catch (e) {
+      alert("Print failed: " + e.message + "\nTip: use the Word (.doc) or HTML download instead.");
+    }
+  };
+  const fdoc = frame.contentWindow.document;
+  fdoc.open();
+  fdoc.write(doc);
+  fdoc.close();
+  // Wait for layout/styles to settle, then print without leaving the app.
+  if (fdoc.readyState === "complete") setTimeout(run, 350);
+  else frame.onload = () => setTimeout(run, 350);
 }
 
 function editResume(id) {
