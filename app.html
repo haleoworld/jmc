@@ -258,6 +258,7 @@ button.btn.danger:hover { background: var(--bad-bg); border-color: transparent; 
 .tag.draft      { background: var(--soft);       color: var(--muted); }
 .tag.analyzed   { background: var(--info-bg);    color: var(--info-fg); }
 .tag.reviewed   { background: var(--accent-soft);color: var(--accent-soft-fg); }
+.tag.archived   { background: var(--soft);       color: var(--muted); }
 table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
 th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
 th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
@@ -1563,6 +1564,19 @@ function companyFromUrl(url) {
     return main ? main.charAt(0).toUpperCase() + main.slice(1).toLowerCase() : "";
   } catch { return ""; }
 }
+// Compact display label for a URL (host + short path), to avoid long links blowing out layout.
+function shortUrl(url) {
+  if (!url) return "";
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./i, "");
+    let path = u.pathname.replace(/\/+$/, "");
+    if (path.length > 18) path = path.slice(0, 18) + "…";
+    return host + path;
+  } catch {
+    return url.length > 32 ? url.slice(0, 32) + "…" : url;
+  }
+}
 
 // Deterministic avatar color from a string (e.g., company name)
 const AVATAR_PALETTE = ["#ef4444","#f97316","#f59e0b","#10b981","#06b6d4","#3b82f6","#8b5cf6","#ec4899","#84cc16","#14b8a6"];
@@ -2175,12 +2189,19 @@ function renderFeBeBreakdownHTML(rawText, opts = {}) {
   const heading = opts.heading || "FE/BE breakdown";
   const cardId = "feb_" + Math.random().toString(36).slice(2, 10);
   window.__feBreakdownTexts[cardId] = rawText || "";
+  const job = opts.job || null;
+  const applyTo = opts.applyTo || "field";
+  window.__feBreakdownJobs = window.__feBreakdownJobs || {};
+  window.__feBreakdownApply = window.__feBreakdownApply || {};
+  window.__feBreakdownJobs[cardId] = job ? job.id : null;
+  window.__feBreakdownApply[cardId] = applyTo;
+  const savedEst = job && job.fe_claude ? job.fe_claude : null;
   const claudeUI = rawText && rawText.length > 50 ? `
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
       <button class="btn ghost" onclick="getClaudeFeEstimate('${cardId}')" id="${cardId}_btn">
-        Get Claude's estimate (~$0.005)
+        ${savedEst ? "Re-estimate with Claude (~$0.005)" : "Get Claude's estimate (~$0.005)"}
       </button>
-      <div id="${cardId}_result" style="margin-top:10px"></div>
+      <div id="${cardId}_result" style="margin-top:10px">${savedEst ? claudeFeEstimateHTML(savedEst, { jobId: job.id, applyTo }) : ""}</div>
     </div>` : "";
 
   if (bd.percent == null) {
@@ -2441,18 +2462,19 @@ ${raw.slice(0, 6000)}
     const m = text.match(/\{[\s\S]*\}/);
     if (!m) throw new Error("No JSON in response");
     const data = JSON.parse(m[0]);
-    resultDiv.innerHTML = `
-      <div class="notice" style="margin:0">
-        <div><b>Claude's estimate: ${data.fe_percent}% frontend</b></div>
-        <div class="small" style="margin-top:4px">${escapeHtml(data.rationale || "")}</div>
-        <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
-          <button class="btn" onclick="applyFePercent(${data.fe_percent})">Use Claude's ${data.fe_percent}%</button>
-        </div>
-      </div>`;
+    const est = { fe_percent: data.fe_percent, rationale: data.rationale || "", at: nowISO() };
+    const jobId = window.__feBreakdownJobs?.[cardId] || null;
+    const applyTo = window.__feBreakdownApply?.[cardId] || "field";
+    // Persist on the job so it stays on the job page for future reference
+    if (jobId) { const j = state.jobs.find(x => x.id === jobId); if (j) { j.fe_claude = est; saveState(); } }
+    resultDiv.innerHTML = claudeFeEstimateHTML(est, { jobId, applyTo });
   } catch (e) {
     resultDiv.innerHTML = `<div class="notice error" style="margin:0">Failed: ${escapeHtml(e.message)}</div>`;
   } finally {
-    btn.disabled = false; btn.textContent = "Get Claude's estimate (~$0.005)";
+    btn.disabled = false;
+    const jid = window.__feBreakdownJobs?.[cardId];
+    const hasSaved = jid && state.jobs.find(x => x.id === jid)?.fe_claude;
+    btn.textContent = hasSaved ? "Re-estimate with Claude (~$0.005)" : "Get Claude's estimate (~$0.005)";
   }
 };
 
@@ -2467,6 +2489,31 @@ window.applyFePercent = function(value) {
   if (applied) showToast(`Applied ${value}% to Frontend % field`);
   else showToast(`Open the intake or edit form to apply this to a field`, 3000);
 };
+
+// Apply a saved Claude estimate directly to a job (used from the read-only job detail view)
+window.useClaudeFeForJob = function(jobId, value) {
+  const j = state.jobs.find(x => x.id === jobId);
+  if (!j) return;
+  j.fe_percent = Math.max(0, Math.min(100, parseInt(value) || 0));
+  rescreenJob(j, criteriaForJob(j).id);
+  saveState();
+  showToast(`Set frontend % to ${j.fe_percent} and re-screened`);
+  renderJobDetail(j, false);
+};
+
+// Render a (persisted or fresh) Claude FE estimate. ctx: { jobId, applyTo:'job'|'field' }
+function claudeFeEstimateHTML(est, ctx = {}) {
+  if (!est) return "";
+  const when = est.at ? ` <span class="muted">· ${escapeHtml(String(est.at).slice(0, 10))}</span>` : "";
+  const useBtn = (ctx.applyTo === "job" && ctx.jobId)
+    ? `<button class="btn" onclick="useClaudeFeForJob('${ctx.jobId}', ${est.fe_percent})">Use ${est.fe_percent}% for this job</button>`
+    : `<button class="btn" onclick="applyFePercent(${est.fe_percent})">Use Claude's ${est.fe_percent}%</button>`;
+  return `<div class="notice" style="margin:0">
+    <div><b>Claude's estimate: ${est.fe_percent}% frontend</b>${when}</div>
+    ${est.rationale ? `<div class="small" style="margin-top:4px">${escapeHtml(est.rationale)}</div>` : ""}
+    <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">${useBtn}</div>
+  </div>`;
+}
 
 function parseJDHeuristic(raw, urlHint) {
   const job = {
@@ -3267,7 +3314,7 @@ function renderJobDetail(j, editMode) {
         </div>
       </div>
 
-      ${renderFeBeBreakdownHTML(j.raw_text, { heading: "FE/BE breakdown (from current raw JD text)" })}
+      ${renderFeBeBreakdownHTML(j.raw_text, { heading: "FE/BE breakdown (from current raw JD text)", job: j, applyTo: "field" })}
     `;
     document.getElementById("e_save").addEventListener("click", () => {
       j.title = document.getElementById("e_title").value.trim();
@@ -3397,7 +3444,7 @@ Return JSON only.`;
           <tr><td class="muted">Posted</td><td>${escapeHtml(j.posted_date || "—")}</td></tr>
           <tr><td class="muted">Reference ID</td><td>${escapeHtml(j.reference_id || "—")}</td></tr>
           <tr><td class="muted">Frontend split</td><td>${escapeHtml(fePct)}</td></tr>
-          <tr><td class="muted">Source link</td><td>${j.url ? `<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener">${escapeHtml(j.url)}</a>` : "—"}</td></tr>
+          <tr><td class="muted">Source link</td><td>${j.url ? `<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener" title="${escapeHtml(j.url)}" style="display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom">${escapeHtml(shortUrl(j.url))} <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg></a>` : "—"}</td></tr>
         </tbody>
       </table>
     </div>
@@ -3420,7 +3467,7 @@ Return JSON only.`;
 
     ${j.notes ? `<div class="card"><h3>Notes</h3><div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(j.notes)}</div></div>` : ""}
 
-    ${renderFeBeBreakdownHTML(j.raw_text)}
+    ${renderFeBeBreakdownHTML(j.raw_text, { job: j, applyTo: "job" })}
 
     <details class="card">
       <summary class="muted flex-between" style="list-style:none;cursor:pointer">
@@ -3602,10 +3649,18 @@ function showBatchDetail(batchId) {
   const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
   const resumeOptions = state.resumes.versions.map(v => `<option value="${v.id}" ${b.resume_version_id === v.id ? "selected" : ""}>${escapeHtml(v.id)} — ${escapeHtml(v.notes || "")}</option>`).join("");
   const critOptions = (state.criteria_sets || []).map(cs => `<option value="${escapeHtml(cs.id)}" ${b.criteria_id === cs.id ? "selected" : ""}>${escapeHtml(cs.name)}</option>`).join("");
+  const BATCH_STATUSES = ["draft", "analyzed", "submitted", "archived"];
+  const statusList = BATCH_STATUSES.includes(b.status) ? BATCH_STATUSES : [b.status, ...BATCH_STATUSES];
+  const statusOptions = statusList.map(s => `<option value="${escapeHtml(s)}" ${b.status === s ? "selected" : ""}>${escapeHtml(s)}</option>`).join("");
   root.innerHTML = `
     <div class="card">
       <h3>${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></h3>
       <div class="row" style="align-items:flex-end;gap:10px">
+        <div class="col" style="flex:1 1 auto"><label>Batch status</label>
+          <select id="b_status_sel">${statusOptions}</select>
+        </div>
+      </div>
+      <div class="row" style="align-items:flex-end;gap:10px;margin-top:8px">
         <div class="col" style="flex:1 1 auto"><label>Screening criteria set</label>
           <select id="b_criteria_sel">${critOptions}</select>
         </div>
@@ -3645,6 +3700,13 @@ function showBatchDetail(batchId) {
     </div>
   `;
 
+  document.getElementById("b_status_sel").addEventListener("change", e => {
+    b.status = e.target.value;
+    if (b.status === "submitted" && !b.submitted_at) b.submitted_at = nowISO();
+    saveState();
+    showToast(`Batch status: ${b.status}`);
+    showBatchDetail(b.id);
+  });
   document.getElementById("b_resume_sel").addEventListener("change", e => {
     b.resume_version_id = e.target.value || null; saveState();
   });
