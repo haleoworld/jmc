@@ -12,7 +12,7 @@
 <style>
 :root {
   color-scheme: light;
-  /* Coinbase blue  */
+  /* Coinbase blue */
   --accent: #0052FF;
   --accent-strong: #003ED1;
   --accent-fg: #ffffff;
@@ -320,6 +320,62 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 .divider { height: 1px; background: var(--line); margin: 14px 0; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .cost-counter { font-variant-numeric: tabular-nums; font-size: 11px; padding: 4px 10px; background: var(--soft); border-radius: 999px; color: var(--muted); font-weight: 500; }
+/* Diff viewer */
+.diff-view {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  max-height: 480px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.diff-add { background: rgba(0, 168, 100, .12); color: var(--good-fg); padding: 1px 4px; border-radius: 3px; }
+.diff-del { background: rgba(223, 95, 103, .12); color: var(--bad-fg); padding: 1px 4px; border-radius: 3px; text-decoration: line-through; }
+.diff-same { color: var(--muted); }
+
+/* Floating Action Button — fixed top-right, below header */
+.fab {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 110px);
+  right: calc(env(safe-area-inset-right) + 14px);
+  z-index: 15;
+  width: 48px; height: 48px;
+  border-radius: 999px;
+  background: var(--accent); color: var(--accent-fg);
+  border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow);
+  transition: transform .12s, background-color .12s;
+}
+.fab:hover { background: var(--accent-strong); transform: scale(1.05); }
+.fab:active { transform: scale(.95); }
+.fab svg { width: 22px; height: 22px; }
+/* On wide screens, align with the content column edge */
+@media (min-width: 760px) {
+  .fab { right: max(calc(env(safe-area-inset-right) + 14px), calc(50vw - 360px + 14px)); }
+}
+/* Smaller / mobile: a touch higher to avoid bumping into content */
+@media (max-width: 768px) {
+  .fab { width: 50px; height: 50px; top: calc(env(safe-area-inset-top) + 102px); }
+}
+
+/* Compact variant of queue-card used in batch detail */
+.batch-job-card { padding: 12px; border-radius: 12px; }
+.batch-job-card .avatar.small { width: 34px; height: 34px; font-size: 12px; }
+.batch-job-card .title-line .title { font-size: 14px; }
+.batch-job-card .title-line .company { font-size: 13px; }
+.batch-job-card .meta { font-size: 12px; }
+.batch-job-card .tag { font-size: 11px; padding: 1px 8px; }
+
+/* Compact icon-btn variant */
+button.icon-btn.small { width: 30px; height: 30px; border-radius: 999px; }
+button.icon-btn.small svg { width: 14px; height: 14px; }
+
 /* Locked-while-analyzing state */
 .is-locked { position: relative; }
 .is-locked .queue-card { opacity: .55; pointer-events: none; }
@@ -510,6 +566,35 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 
 <div id="toast" class="toast" style="display:none"></div>
 
+<div id="help_modal" class="lock-screen" style="display:none">
+  <div class="lock-card" style="max-width:560px;max-height:85vh;overflow-y:auto">
+    <h1 style="text-align:left">How batch analyzer & ATS work</h1>
+
+    <h3 style="margin-top:18px">Batch analyzer (uses AI / Claude)</h3>
+    <p class="small" style="line-height:1.55;color:var(--fg)">For each job in the batch, Claude reads the job's title, company, requirements, and interview process. It then drafts an answer to each of your <b>Default application questions</b> (configurable in Settings → Profile). Answers are tailored — they reference the specific company and tie to the JD when relevant. Custom Q&A you've added stays untouched. Output appears under <b>Application Q&A</b> on each job's detail page; you can copy, edit, or regenerate per job.</p>
+
+    <h3 style="margin-top:18px">ATS check (no AI — pure keyword matching)</h3>
+    <p class="small" style="line-height:1.55;color:var(--fg)">The ATS checker counts how many "ATS keywords" (from a curated list of ~100 frontend terms — React, TypeScript, accessibility, Storybook, etc.) appear in each JD vs. your selected resume version. The score is the percentage of JD-mentioned keywords that also appear in your resume, weighted by how often each keyword shows up in the JD. <b>100/100 = perfect coverage.</b> Real-world ATS systems do something similar but with much broader vocabularies.</p>
+
+    <h3 style="margin-top:18px">What "ATS scores vs resume v1" means</h3>
+    <p class="small" style="line-height:1.55;color:var(--fg)">The check ran against the resume version you picked (e.g. v1, v2…). Different resume versions will give different scores. The intent: iterate on the resume between batches, save each version, and see which version scores best on similar JDs.</p>
+
+    <h3 style="margin-top:18px">What "top gap" means</h3>
+    <p class="small" style="line-height:1.55;color:var(--fg)">Top gap = the single keyword that appears most often in that JD but is missing from your resume. Closing it (i.e., adding the term to your resume in a defensible way) gives the biggest score lift for that job. The <b>top keyword gaps across batch</b> section lists keywords missing from your resume that appear across <em>multiple</em> JDs — closing those lifts several scores at once.</p>
+
+    <h3 style="margin-top:18px">How to use this to improve your resume</h3>
+    <ol class="small" style="padding-left:18px;line-height:1.55">
+      <li>Run ATS check on a batch. Note jobs scoring &lt; 60%.</li>
+      <li>Look at the cross-batch gap list — start with terms missing from 2+ jobs.</li>
+      <li>For each gap, ask: do I actually have this experience? If yes → rephrase an existing bullet to include the term. If no → leave it; don't invent.</li>
+      <li>Click <b>Improve resume</b> on the batch — Claude suggests one specific bullet rewrite based on the gaps, saves it as a new resume version.</li>
+      <li>Re-run ATS check using the new version. Compare scores. Iterate.</li>
+    </ol>
+
+    <button class="btn ghost" id="help_modal_close" style="width:100%;margin-top:20px;justify-content:center">Got it</button>
+  </div>
+</div>
+
 <div id="lock_screen" class="lock-screen" style="display:none">
   <div class="lock-card">
     <div class="lock-logo">
@@ -562,12 +647,10 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 <!-- ========== QUEUE (with Intake + Detail sub-views) ========== -->
 <section class="view" data-view="queue">
   <div id="q_list_view">
-    <div class="flex-between" style="margin-bottom:14px;gap:10px;flex-wrap:wrap;align-items:center">
-      <h2 style="margin:0">Queue</h2>
-      <button class="icon-btn primary" id="q_add_btn" aria-label="Add job" title="Add job">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-    </div>
+    <h2 style="margin:0 0 14px">Queue</h2>
+    <button class="fab" id="q_add_btn" aria-label="Add job" title="Add job">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
 
     <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <label style="margin:0;display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:14px;color:var(--muted)"><input type="checkbox" id="q_show_rejected" style="accent-color:var(--accent)"> Show rejected</label>
@@ -692,20 +775,39 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 <section class="view" data-view="resumes">
   <h2>Resume versions</h2>
   <div class="notice">Each batch can pick a resume version for ATS scoring + one incremental improvement.</div>
+  <button class="fab" id="r_new_btn" title="New resume version" aria-label="New resume version">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
   <div class="card">
-    <div class="flex-between">
-      <h3 style="margin:0">Versions</h3>
-      <button class="icon-btn primary" id="r_new_btn" title="New resume version" aria-label="New resume version">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-    </div>
-    <div id="r_list" style="margin-top:10px"></div>
+    <h3 style="margin:0 0 10px">Versions</h3>
+    <div id="r_list"></div>
   </div>
+
   <div class="card" id="r_edit_card" style="display:none">
     <h3 id="r_edit_title">Edit resume</h3>
-    <div class="row"><div class="col"><label>Version notes</label><input type="text" id="r_notes" placeholder="What changed vs prior version"></div></div>
-    <div class="row"><label>Resume content (markdown or plain text)</label><textarea id="r_content" style="min-height:300px"></textarea></div>
-    <div class="row" style="gap:8px">
+    <div class="row"><div class="col">
+      <label>Version notes — what changed vs the prior version</label>
+      <textarea id="r_notes" style="min-height:60px;font-family:inherit;font-size:14px" placeholder="e.g. Added 'design system' to S&P Global bullet. Strengthened metrics on Amazon role."></textarea>
+    </div></div>
+    <div class="row" style="align-items:flex-end;gap:10px">
+      <div class="col"><label>Output template</label>
+        <select id="r_template_select"></select>
+      </div>
+      <button class="btn ghost" type="button" id="r_manage_templates_link" style="flex:0 0 auto">Manage templates</button>
+    </div>
+    <div id="r_diff_section" style="margin-top:14px;display:none">
+      <div class="row" style="align-items:center;gap:8px">
+        <label style="margin:0;flex:0 0 auto">Compare against</label>
+        <select id="r_diff_base" style="flex:1 1 auto;max-width:240px"></select>
+        <span class="muted small" id="r_diff_summary"></span>
+      </div>
+      <div id="r_diff_inline" class="diff-view" style="max-height:160px;margin-top:8px;font-size:11px"></div>
+    </div>
+    <div class="row" style="margin-top:14px"><div class="col">
+      <label>Resume content (markdown or plain text)</label>
+      <textarea id="r_content" style="min-height:280px"></textarea>
+    </div></div>
+    <div class="row" style="gap:8px;margin-top:10px">
       <button class="btn" id="r_save_btn">Save</button>
       <button class="btn ghost" id="r_cancel_btn">Cancel</button>
     </div>
@@ -744,9 +846,10 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
       <div class="col"><label>Professional biography (file path or paste below)</label><input type="text" id="p_prof_bio"></div>
     </div>
     <details>
-      <summary>Paste biographies inline (used by LLM for app-prep when posting asks unusual questions)</summary>
-      <div style="margin-top:6px"><label>Life biography text (optional)</label><textarea id="p_life_bio_text" placeholder="Paste text content of life biography here..."></textarea></div>
-      <div style="margin-top:6px"><label>Professional biography text (optional)</label><textarea id="p_prof_bio_text" placeholder="Paste text content of professional biography here..."></textarea></div>
+      <summary>Bio text for Claude (gives AI more context for personalized answers)</summary>
+      <p class="small muted" style="margin:8px 0">Paste extra background here that isn't on your resume — life story, side projects, what motivates you, deeper career highlights. Claude reads this when drafting answers to questions like "tell us about yourself" or "describe a recent project", producing more authentic, specific responses. Leave blank to keep prompts cheap; the analyzer still works without this.</p>
+      <div style="margin-top:6px"><label>Life biography text (optional)</label><textarea id="p_life_bio_text" placeholder="Personal story — background, motivations, interests outside work. Truncated at ~2000 chars when sent to Claude."></textarea></div>
+      <div style="margin-top:6px"><label>Professional biography text (optional)</label><textarea id="p_prof_bio_text" placeholder="Long-form career detail beyond what's on your resume — recent projects, technical depth, leadership stories. Truncated at ~2000 chars."></textarea></div>
     </details>
     <div class="row" style="margin-top:8px">
       <label>Target job titles (comma-separated)</label>
@@ -819,6 +922,23 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
     <div class="chips" id="c_target_companies"></div>
     <div class="row" style="margin-top:10px">
       <div class="col"><label>Target persona (used by LLM for nuanced "is this a fit?" judgments)</label><textarea id="c_target_persona" style="min-height:60px"></textarea></div>
+    </div>
+  </div>
+
+  <div class="card" data-settings-section="templates">
+    <h3>Resume templates</h3>
+    <p class="small muted" style="margin:0 0 12px">Define output formats for your resume. Each template is a plain-English description of the layout and styling — Claude reads it during <b>Generate</b> on a resume version to produce a styled HTML/PDF/Word file.</p>
+    <div id="s_templates_list"></div>
+    <button class="btn ghost" id="s_template_new_btn" style="margin-top:10px">+ New template</button>
+  </div>
+
+  <div class="card" data-settings-section="templates" id="s_template_edit_card" style="display:none">
+    <h3 id="s_template_edit_title">Edit template</h3>
+    <div class="row"><div class="col"><label>Name</label><input type="text" id="s_template_name" placeholder="e.g. Two-column modern"></div></div>
+    <div class="row"><div class="col"><label>Description (plain English layout & styling instructions)</label><textarea id="s_template_description" style="min-height:280px;font-family:inherit;font-size:13px;line-height:1.5"></textarea></div></div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn" id="s_template_save_btn">Save</button>
+      <button class="btn ghost" id="s_template_cancel_btn">Cancel</button>
     </div>
   </div>
 
@@ -968,6 +1088,52 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 // ============================================================================
 // State management
 // ============================================================================
+// Default resume template — declared early so defaultState() can reference it during initial loadState().
+const DEFAULT_TEMPLATE_CLASSIC = {
+  id: "tpl_classic_orange",
+  name: "Classic single-column (orange headers)",
+  description: `Single-column professional resume, sans-serif throughout (Arial / Helvetica / Segoe UI / Roboto). White background, dark text (#222). Target one page if possible, but allow content to breathe — do NOT compress to fit at the cost of readability. A4/Letter @page with 0.75in margins on all sides. Max-width 780px centered when displayed on screen. Body font 11.5pt, line-height 1.55.
+
+HEADER
+- Name centered, h1, ~30pt bold, color #222, margin-bottom 8px.
+- Contact line below name, centered, ~10.5pt, separated by " | ":
+  Format: "EMAIL: address | MOBILE: phone | LINKEDIN: url | ADDRESS: city, region, country"
+  Labels (EMAIL, MOBILE, LINKEDIN, ADDRESS) bold uppercase, values regular weight.
+  Allow wrapping to 2 lines if needed (centered).
+- Thin gray (#ccc) horizontal rule below the contact row, margin-top 16px, margin-bottom 22px.
+
+SECTION HEADERS (e.g. PROFESSIONAL SUMMARY, TECHNICAL SKILLS, PROFESSIONAL EXPERIENCE, EDUCATION & CERTIFICATIONS)
+- Uppercase, bold, accent color #E8A33D (orange-yellow), ~13.5pt, letter-spacing 0.05em, margin-top 20px, margin-bottom 12px.
+- A thin gray (#ccc) horizontal rule AFTER each section's content (between sections), margin-top 20px.
+
+PROFESSIONAL SUMMARY
+- 3-4 line paragraph. Bold inline highlights for key tech (Angular (14+), React, TypeScript) and achievement claims (employer names, numeric achievements). Paragraph line-height 1.55.
+
+TECHNICAL SKILLS
+- Bulleted list with 3-4 categories. Each bullet starts with a bold category label + colon (e.g. "Expertise:", "Architecture:", "Cloud & Tools:", "Quality:"), followed by comma-separated items, ending with a period.
+- 6px vertical spacing between category bullets.
+
+PROFESSIONAL EXPERIENCE
+- Each role has a HEADER ROW using flexbox: left side "<Company>, <Department> - <Role>" (bold, flexible width, NO wrap to column) — location can be appended after the role name with a "|" if it fits, OR placed on a small second sub-line in regular muted text just below the bold company line. Right side: date range (italic, gray #555, no-wrap).
+- 6px spacing between header row and the first bullet.
+- 2-4 achievement bullets per role. Bullets have 7px spacing between them. Each bullet line-height 1.55.
+- Bold inline highlights on metrics (percentages, throughput numbers, "1M+", "85%", etc.) and tech names within bullets.
+- 18px gap between separate roles.
+
+EDUCATION & CERTIFICATIONS
+- One line for the degree: "<Degree>" (bold) + " | <University>" (regular) on the left, date (italic, gray) right-aligned.
+- 10px spacing, then "Certifications:" (bold) followed by comma-separated certifications wrapping naturally.
+
+BULLETS
+- Small filled circle markers (•), 22px left indent, 10px gap between marker and text.
+
+OVERALL: prioritize recruiter readability. Generous line-height (1.55), comfortable 0.75in margins, clear visual hierarchy. Do not cram. If the content naturally exceeds one page, keep the breathing room and let it flow to two pages rather than shrinking everything.
+`,
+  content_version: 2,
+  created_at: "2026-04-27",
+  is_default: true
+};
+
 const LS_KEY = "phone_screen_app_v1";
 let state = loadState();
 let sessionCost = 0;
@@ -984,6 +1150,24 @@ function loadState() {
         if (!("fe_percent" in j)) j.fe_percent = null;
         if (!Array.isArray(j.qa)) j.qa = [];
       });
+      if (s.resumes?.versions) s.resumes.versions.forEach(v => {
+        if (typeof v.template !== "string") v.template = "";
+        if (typeof v.notes !== "string") v.notes = v.notes || "";
+        if (!v.template_id) v.template_id = "tpl_classic_orange";
+      });
+      if (!Array.isArray(s.templates) || !s.templates.length) {
+        s.templates = [DEFAULT_TEMPLATE_CLASSIC];
+      } else {
+        const existing = s.templates.find(t => t.id === "tpl_classic_orange");
+        if (!existing) {
+          s.templates.unshift(DEFAULT_TEMPLATE_CLASSIC);
+        } else if (!existing.user_edited && (existing.content_version || 0) < (DEFAULT_TEMPLATE_CLASSIC.content_version || 0)) {
+          // Auto-update the seeded default if the user hasn't customized it
+          existing.description = DEFAULT_TEMPLATE_CLASSIC.description;
+          existing.name = DEFAULT_TEMPLATE_CLASSIC.name;
+          existing.content_version = DEFAULT_TEMPLATE_CLASSIC.content_version;
+        }
+      }
       if (!s.settings) s.settings = { api_key: "", haiku_model: "claude-haiku-4-5-20251001", sonnet_model: "claude-sonnet-4-6", gist_token: "", gist_id: "", last_synced_at: "" };
       else {
         s.settings.haiku_model = s.settings.haiku_model || "claude-haiku-4-5-20251001";
@@ -1046,9 +1230,14 @@ function defaultState() {
     jobs: [],
     batches: [],
     resumes: {
-      versions: [{ id: "v1", created_at: todayISO(), filename: "v1.md", notes: "Initial", batch_id: null, parent: null,
-        content: "# Jerry Lau\nSenior Frontend Engineer · Toronto, ON · jerrylauky.001@gmail.com\n\n[Replace with your real resume in plain text or markdown]" }]
+      versions: [{
+        id: "v1", created_at: todayISO(), filename: "v1.md", notes: "Initial",
+        batch_id: null, parent: null,
+        template_id: "tpl_classic_orange",
+        content: "# Jerry Lau\nSenior Frontend Engineer · Toronto, ON · jerrylauky.001@gmail.com\n\n[Replace with your real resume in plain text or markdown]"
+      }]
     },
+    templates: [DEFAULT_TEMPLATE_CLASSIC],
     settings: {
       api_key: "",
       haiku_model: "claude-haiku-4-5-20251001",
@@ -1100,6 +1289,7 @@ function scheduleCloudSync() {
 
 function serializeForSync(s) {
   const localOnly = { api_key: s.settings.api_key, gist_token: s.settings.gist_token, gist_id: s.settings.gist_id, usage_log: s.settings.usage_log };
+  // templates is part of normal state — synced automatically since it's a top-level key in s
   const stripped = {
     ...s,
     settings: {
@@ -1398,6 +1588,8 @@ const SETTINGS_SECTIONS = [
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>` },
   { key: "criteria", label: "Screening criteria", sub: "Must-haves, dealbreakers, target companies",
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 01-2.031.352 5.989 5.989 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971z"/></svg>` },
+  { key: "templates", label: "Resume templates",  sub: "Output formats for resume export",
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>` },
   { key: "claude",   label: "Claude access",      sub: "API key, model selection",
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>` },
   { key: "usage",    label: "Usage & budget",     sub: "Per-call cost tracking, monthly budget",
@@ -1446,6 +1638,7 @@ function showSettingsSection(key) {
   // Repopulate field values for the chosen section
   populateSettingsFields();
   if (key === "usage") renderUsageSummary();
+  if (key === "templates") renderTemplatesList();
 }
 
 function populateSettingsFields() {
@@ -1464,6 +1657,7 @@ function renderSettings() {
   showSettingsMenu();
   populateSettingsFields();
   renderUsageSummary();
+  const s = state.settings || {};
   const statusEl = document.getElementById("cowork_status");
   const inCowork = typeof window.cowork !== "undefined" && window.cowork.askClaude;
   if (inCowork) {
@@ -1484,6 +1678,52 @@ function renderSettings() {
     gistStatus.textContent = "No GitHub token set. Sync is off — data lives only in this browser.";
   }
   setSyncIndicator(s.last_synced_at ? "synced" : "off");
+}
+
+function renderTemplatesList() {
+  const root = document.getElementById("s_templates_list");
+  if (!root) return;
+  const list = state.templates || [];
+  if (!list.length) { root.innerHTML = `<div class="muted small">No templates yet.</div>`; return; }
+  root.innerHTML = list.map(t => `
+    <div class="list-item" data-template-id="${escapeHtml(t.id)}">
+      <div class="grow">
+        <div><b>${escapeHtml(t.name)}</b>${t.is_default ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">default</span>` : ""}</div>
+        <div class="muted small">${escapeHtml((t.description || "").split("\n")[0].slice(0, 100))}…</div>
+      </div>
+      <button class="icon-btn t_edit" data-id="${escapeHtml(t.id)}" title="Edit" aria-label="Edit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+      </button>
+      <button class="icon-btn danger t_del" data-id="${escapeHtml(t.id)}" title="Delete" aria-label="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+      </button>
+    </div>
+  `).join("");
+  root.querySelectorAll(".t_edit").forEach(b => b.addEventListener("click", e => editTemplate(e.currentTarget.dataset.id)));
+  root.querySelectorAll(".t_del").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    const t = state.templates.find(x => x.id === id);
+    if (!t) return;
+    if (t.is_default && state.templates.length === 1) { alert("Can't delete the only template."); return; }
+    if (!confirm(`Delete template "${t.name}"?`)) return;
+    state.templates = state.templates.filter(x => x.id !== id);
+    // Reassign resumes that referenced this template to the first available one
+    const fallback = state.templates[0]?.id;
+    state.resumes.versions.forEach(v => { if (v.template_id === id) v.template_id = fallback; });
+    saveState();
+    renderTemplatesList();
+  }));
+}
+
+function editTemplate(id) {
+  const t = id ? state.templates.find(x => x.id === id) : null;
+  document.getElementById("s_template_edit_card").style.display = "block";
+  document.getElementById("s_template_edit_title").textContent = t ? `Edit ${t.name}` : "New template";
+  document.getElementById("s_template_name").value = t ? t.name : "";
+  document.getElementById("s_template_description").value = t ? (t.description || "") : "";
+  document.getElementById("s_template_save_btn").dataset.id = id || "";
+  // scroll into view
+  setTimeout(() => document.getElementById("s_template_edit_card").scrollIntoView({ behavior: "smooth", block: "start" }), 50);
 }
 
 function renderUsageSummary() {
@@ -1862,6 +2102,49 @@ window.deleteQA = function(jobId, idx) {
   renderJobDetail(j, false);
 };
 
+window.acceptResumeEdit = function(batchId) {
+  const b = state.batches.find(x => x.id === batchId);
+  if (!b || !b.resume_improvement) return;
+  const ri = b.resume_improvement;
+  const resume = state.resumes.versions.find(v => v.id === ri.from_version_id);
+  if (!resume) { alert("Source resume version is gone."); return; }
+  let newContent = resume.content;
+  if (ri.before && newContent.includes(ri.before)) {
+    newContent = newContent.replace(ri.before, ri.after);
+  } else {
+    // Couldn't auto-apply — open resume editor with the proposed change
+    alert("Couldn't find the exact 'before' text in the resume. Opening the resume editor — paste the 'after' text where appropriate.");
+    document.getElementById("r_edit_card").style.display = "block";
+    document.getElementById("r_edit_title").textContent = "Apply suggested edit manually";
+    document.getElementById("r_notes").value = `Address gap: ${ri.chosen_keyword} (per ${b.id})`;
+    document.getElementById("r_content").value = resume.content;
+    document.getElementById("r_save_btn").dataset.id = "";
+    showTab("resumes");
+    return;
+  }
+  const newId = "v" + state.nextResumeId++;
+  state.resumes.versions.push({
+    id: newId, created_at: todayISO(), filename: newId + ".md",
+    notes: `Address gap: ${ri.chosen_keyword} (per ${b.id})`,
+    batch_id: b.id, parent: resume.id, content: newContent
+  });
+  b.resume_version_id = newId;
+  ri.status = "applied";
+  ri.new_version_id = newId;
+  saveState();
+  showToast(`Saved new resume version ${newId}`);
+  showBatchDetail(b.id);
+};
+
+window.dismissResumeEdit = function(batchId) {
+  const b = state.batches.find(x => x.id === batchId);
+  if (!b || !b.resume_improvement) return;
+  if (!confirm("Dismiss this resume edit suggestion?")) return;
+  b.resume_improvement.status = "dismissed";
+  saveState();
+  showBatchDetail(b.id);
+};
+
 window.regenerateJobQA = async function(jobId) {
   const j = state.jobs.find(x => x.id === jobId);
   if (!j) return;
@@ -1873,7 +2156,9 @@ window.regenerateJobQA = async function(jobId) {
     name: profile.full_name, location: profile.location,
     current_role: profile.current_role, target_titles: profile.target_titles,
     work_history: profile.work_history || [],
-    notice_period: profile.notice_period, work_authorization: profile.work_auth
+    notice_period: profile.notice_period, work_authorization: profile.work_auth,
+    life_biography: (profile.life_bio_text || "").slice(0, 2000),
+    professional_biography: (profile.prof_bio_text || "").slice(0, 2000)
   };
   const prompt = `You are helping ${profile.full_name || "the candidate"} prepare to apply to one job. Generate a tailored answer to each STANDARD QUESTION (2-4 sentences each, neutral professional tone, no exclamation marks). Personalize for this specific job.
 
@@ -3023,16 +3308,27 @@ function showBatchDetail(batchId) {
   root.innerHTML = `
     <div class="card">
       <h3>${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></h3>
-      <div class="row">
-        <div class="col"><label>Resume version for this batch</label>
+      <div class="row" style="align-items:flex-end;gap:10px">
+        <div class="col" style="flex:1 1 auto"><label>Resume version</label>
           <select id="b_resume_sel"><option value="">— pick a resume —</option>${resumeOptions}</select>
         </div>
-        <div class="col" style="margin-top:18px"><button class="btn" id="b_ats_btn">Run ATS check</button></div>
       </div>
-      <div class="row" style="gap:8px;margin-top:10px">
-        <button class="btn" id="b_analyzer_btn" ${b.is_analyzing ? "disabled" : ""}>${b.is_analyzing ? "Analyzing…" : "Analyze batch"}</button>
-        <button class="btn" id="b_resume_imp_btn" ${b.is_analyzing ? "disabled" : ""}>Improve resume</button>
-        <button class="btn secondary" id="b_mark_submitted" ${b.is_analyzing ? "disabled" : ""}>Mark submitted</button>
+      <div class="row" style="gap:4px;margin-top:10px;margin-left:-6px;flex-wrap:wrap">
+        <button class="icon-btn" id="b_ats_btn" title="Run ATS check" aria-label="Run ATS check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+        <button class="icon-btn" id="b_analyzer_btn" title="Analyze batch (generate Q&A)" aria-label="Analyze batch" ${b.is_analyzing ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.091 3.091zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>
+        </button>
+        <button class="icon-btn" id="b_resume_imp_btn" title="Suggest one incremental resume edit" aria-label="Improve resume" ${b.is_analyzing ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/><path d="M9 16l2 2 4-4"/></svg>
+        </button>
+        <button class="icon-btn" id="b_mark_submitted" title="Mark batch as submitted" aria-label="Mark submitted" ${b.is_analyzing ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+        </button>
+        <button class="icon-btn" id="b_help_btn" title="How analyzer and ATS work" aria-label="Help" style="margin-left:auto">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/></svg>
+        </button>
       </div>
     </div>
 
@@ -3053,6 +3349,7 @@ function showBatchDetail(batchId) {
   document.getElementById("b_ats_btn").addEventListener("click", () => runATSCheck(b));
   document.getElementById("b_analyzer_btn").addEventListener("click", () => runBatchAnalyzer(b));
   document.getElementById("b_resume_imp_btn").addEventListener("click", () => runResumeImprovement(b));
+  document.getElementById("b_help_btn").addEventListener("click", () => showBatchHelpModal());
   document.getElementById("b_mark_submitted").addEventListener("click", () => {
     if (!confirm(`Mark all ${jobs.length} jobs in ${b.id} as submitted? (You can update individual outcomes after.)`)) return;
     const now = nowISO();
@@ -3070,20 +3367,67 @@ document.getElementById("b_back_btn").addEventListener("click", renderBatches);
 function renderBatchAnalysis(b) {
   const card = document.getElementById("b_analysis_card");
   const content = document.getElementById("b_analysis_content");
-  if (!b.analysis) { card.style.display = "none"; return; }
+  if (!b.analysis && !b.ats && !b.resume_improvement) { card.style.display = "none"; return; }
   card.style.display = "block";
-  const a = b.analysis;
-  let html = `<div class="small muted" style="margin-bottom:10px">Per-job Q&A is on each job card below — tap a job to view & copy answers.</div>`;
-  if (a.top_requirements?.length) {
-    html += `<h4 style="margin:10px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top requirements across batch</h4><ol style="padding-left:20px;margin:0">`;
-    a.top_requirements.forEach(r => { html += `<li style="margin:4px 0"><b>${escapeHtml(r.requirement)}</b> <span class="muted small">— ${escapeHtml(r.impact || "?")}, ${r.count || "?"} JD(s)</span></li>`; });
-    html += `</ol>`;
+  let html = "";
+
+  if (b.analysis) {
+    const a = b.analysis;
+    html += `<div class="small muted" style="margin-bottom:10px">Per-job Q&A is on each job card below — tap a job to view & copy answers.</div>`;
+    if (a.top_requirements?.length) {
+      html += `<h4 style="margin:10px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top requirements across batch</h4><ol style="padding-left:20px;margin:0">`;
+      a.top_requirements.forEach(r => { html += `<li style="margin:4px 0"><b>${escapeHtml(r.requirement)}</b> <span class="muted small">— ${escapeHtml(r.impact || "?")}, ${r.count || "?"} JD(s)</span></li>`; });
+      html += `</ol>`;
+    }
+    if (a.top_keywords?.length) {
+      html += `<h4 style="margin:12px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top keywords / tech</h4><div class="chips">`;
+      a.top_keywords.forEach(k => { html += `<span class="chip">${escapeHtml(k.keyword)} <span class="muted">×${k.count}</span></span>`; });
+      html += `</div>`;
+    }
   }
-  if (a.top_keywords?.length) {
-    html += `<h4 style="margin:12px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top keywords / tech</h4><div class="chips">`;
-    a.top_keywords.forEach(k => { html += `<span class="chip">${escapeHtml(k.keyword)} <span class="muted">×${k.count}</span></span>`; });
-    html += `</div>`;
+
+  if (b.resume_improvement) {
+    if (b.analysis) html += `<div class="divider" style="margin:14px 0"></div>`;
+    const ri = b.resume_improvement;
+    const isApplied = ri.status === "applied";
+    const isDismissed = ri.status === "dismissed";
+    html += `<h4 style="margin:0 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Resume improvement suggestion</h4>`;
+    html += `<div style="background:var(--soft);padding:12px;border-radius:10px">
+      <div style="font-weight:700;margin-bottom:4px">Add: <span style="color:var(--accent)">${escapeHtml(ri.chosen_keyword || "?")}</span></div>
+      <div class="small muted" style="margin-bottom:8px">${escapeHtml(ri.rationale || "")}</div>
+      <div class="small" style="margin-bottom:6px"><b>Where:</b> ${escapeHtml(ri.where || "—")}</div>
+      <div class="small" style="margin-bottom:4px"><b>Before:</b></div>
+      <pre style="white-space:pre-wrap;word-break:break-word;font-size:12px;background:var(--bg);padding:8px;border-radius:6px;margin:0 0 8px">${escapeHtml(ri.before || "")}</pre>
+      <div class="small" style="margin-bottom:4px"><b>After:</b></div>
+      <pre style="white-space:pre-wrap;word-break:break-word;font-size:12px;background:var(--bg);padding:8px;border-radius:6px;margin:0 0 8px">${escapeHtml(ri.after || "")}</pre>
+      <div class="small muted" style="margin-bottom:10px"><b>Confidence:</b> ${escapeHtml(ri.confidence || "")} · <b>From:</b> ${escapeHtml(ri.from_version_id || "?")} · <b>Generated:</b> ${escapeHtml(ri.generated_at?.slice(0,10) || "?")}</div>
+      ${isApplied
+        ? `<div class="tag offer" style="margin-bottom:8px">✓ Applied as ${escapeHtml(ri.new_version_id || "?")}</div>`
+        : isDismissed
+        ? `<div class="tag rejected" style="margin-bottom:8px">Dismissed</div>`
+        : `<div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn" onclick="acceptResumeEdit('${b.id}')">Accept & save as new version</button>
+            <button class="btn ghost" onclick="dismissResumeEdit('${b.id}')">Dismiss</button>
+          </div>`}
+    </div>`;
   }
+
+  if (b.ats) {
+    if (b.analysis || b.resume_improvement) html += `<div class="divider" style="margin:14px 0"></div>`;
+    html += `<h4 style="margin:0 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">ATS scores vs resume ${escapeHtml(b.ats.resume_version_id || "?")}</h4>`;
+    html += `<table style="font-size:13px"><thead><tr><th>Score</th><th>Job</th><th>Top gap</th></tr></thead><tbody>`;
+    (b.ats.per_job || []).forEach(p => {
+      const topMiss = (p.missing && p.missing[0]) || "—";
+      html += `<tr><td><b>${p.score}</b>/100</td><td>${escapeHtml(p.title)} — ${escapeHtml(p.company || "")}</td><td>${escapeHtml(topMiss)}</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    if (b.ats.agg_missing?.length) {
+      html += `<h4 style="margin:14px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top keyword gaps across batch</h4><div class="chips">`;
+      b.ats.agg_missing.slice(0, 15).forEach(([t, c]) => { html += `<span class="chip">${escapeHtml(t)} <span class="muted">×${c}</span></span>`; });
+      html += `</div>`;
+    }
+  }
+
   content.innerHTML = html;
 }
 
@@ -3102,34 +3446,34 @@ function renderBatchJobs(b) {
     const j = state.jobs.find(x => x.id === jid);
     if (!j) return;
     const card = document.createElement("div");
-    card.className = "queue-card";
+    card.className = "queue-card batch-job-card";
     const initials = avatarInitials(j.company || "?");
     const color = avatarColor(j.company || "?");
     const statusOpts = ["batched","submitted","phonescreen","onsite","offer","rejected_by_co","withdrawn","ghosted"].map(s => `<option value="${s}" ${j.status === s ? "selected" : ""}>${s}</option>`).join("");
     const qaCount = (j.qa || []).length;
+    const datesLine = (j.applied_at || j.phone_screen_at)
+      ? `<div class="meta small">${j.applied_at ? `Applied ${escapeHtml(j.applied_at.slice(0,10))}` : ""}${j.applied_at && j.phone_screen_at ? " · " : ""}${j.phone_screen_at ? `screen ${escapeHtml(j.phone_screen_at.slice(0,10))}` : ""}</div>`
+      : "";
     card.innerHTML = `
       <div class="top">
-        <div class="avatar" style="background:${color}" aria-hidden="true">${escapeHtml(initials)}</div>
+        <div class="avatar small" style="background:${color}" aria-hidden="true">${escapeHtml(initials)}</div>
         <div class="main">
-          <div class="title-line"><span class="title">${escapeHtml(j.title)}</span></div>
-          <div class="meta">${escapeHtml(j.company || "—")}</div>
-          <div class="meta">Applied: ${escapeHtml(j.applied_at?.slice(0,10) || "—")} · Phone screen: ${escapeHtml(j.phone_screen_at?.slice(0,10) || "—")}</div>
-          <div class="tags">
+          <div class="title-line"><span class="title">${escapeHtml(j.title)}</span> <span class="company">· ${escapeHtml(j.company || "—")}</span></div>
+          ${datesLine}
+          <div class="tags" style="margin-top:6px">
             <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
             ${qaCount > 0 ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">${qaCount} Q&A</span>` : ""}
           </div>
-          <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center" onclick="event.stopPropagation()">
-            <select class="j_status" data-id="${j.id}" style="flex:0 0 auto;max-width:200px">${statusOpts}</select>
-          </div>
-          <div class="row" style="gap:4px;margin-top:8px;margin-left:-8px" onclick="event.stopPropagation()">
-            <button class="icon-btn j_edit" data-id="${j.id}" title="Edit job" aria-label="Edit job">
+          <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;margin-left:-6px" onclick="event.stopPropagation()">
+            <select class="j_status" data-id="${j.id}" style="flex:0 0 auto;max-width:180px;min-height:34px;padding:5px 10px;font-size:13px">${statusOpts}</select>
+            <button class="icon-btn small j_edit" data-id="${j.id}" title="Edit job" aria-label="Edit job">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
             </button>
-            <button class="icon-btn j_remove" data-id="${j.id}" title="Remove from batch (keep in queue)" aria-label="Remove from batch">
+            <button class="icon-btn small j_remove" data-id="${j.id}" title="Remove from batch" aria-label="Remove from batch">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 12H6"/></svg>
             </button>
-            <button class="icon-btn danger j_delete" data-id="${j.id}" title="Delete job permanently" aria-label="Delete">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397M3.75 5.79c.34-.059.68-.114 1.022-.165m7.5-1.41a48.667 48.667 0 00-7.5 0"/></svg>
+            <button class="icon-btn small danger j_delete" data-id="${j.id}" title="Delete job" aria-label="Delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
             </button>
           </div>
         </div>
@@ -3225,19 +3569,8 @@ function runATSCheck(b) {
   const sortedMissing = Object.entries(aggMissing).sort((a, c) => c[1] - a[1]);
   b.ats = { resume_version_id: b.resume_version_id, per_job: perJob, agg_missing: sortedMissing, run_at: nowISO() };
   saveState();
-  let html = `<h4>ATS scores vs resume ${escapeHtml(b.resume_version_id)}</h4>`;
-  html += `<table><thead><tr><th>Score</th><th>Job</th><th>Top gap</th></tr></thead><tbody>`;
-  perJob.forEach(p => {
-    const topMiss = p.missing[0] || "—";
-    html += `<tr><td><b>${p.score}</b>/100</td><td>${escapeHtml(p.title)} — ${escapeHtml(p.company || "")}</td><td>${escapeHtml(topMiss)}</td></tr>`;
-  });
-  html += `</tbody></table>`;
-  html += `<h4 style="margin-top:14px">Top keyword gaps across batch (close these in your resume to lift multiple jobs)</h4><div class="chips">`;
-  sortedMissing.slice(0, 15).forEach(([t, c]) => { html += `<span class="chip">${escapeHtml(t)} (${c}x)</span>`; });
-  html += `</div>`;
-  const card = document.getElementById("b_analysis_card");
-  card.style.display = "block";
-  document.getElementById("b_analysis_content").innerHTML += html;
+  renderBatchAnalysis(b);
+  showToast(`ATS check complete. Average score: ${Math.round(perJob.reduce((s, p) => s + p.score, 0) / (perJob.length || 1))}/100`);
 }
 
 // ============================================================================
@@ -3261,7 +3594,9 @@ async function runBatchAnalyzer(b) {
       target_titles: profile.target_titles,
       work_history: profile.work_history || [],
       notice_period: profile.notice_period,
-      work_authorization: profile.work_auth
+      work_authorization: profile.work_auth,
+      life_biography: (profile.life_bio_text || "").slice(0, 2000),
+      professional_biography: (profile.prof_bio_text || "").slice(0, 2000)
     };
     const defaultQs = state.settings.default_questions || [];
     const prompt = `You are helping Jerry Lau, a senior frontend engineer based in Toronto, prepare application packets for a batch of qualified jobs.
@@ -3425,40 +3760,26 @@ Return ONLY valid JSON:
   "confidence": "reframe of existing experience | net-new claim that needs verification"
 }`;
     // Tagged "sonnet" — used when running via API key. Cowork built-in is Haiku regardless.
-    const result = await askClaude(prompt, [], 0.04, "sonnet");
+    const result = await askClaude(prompt, [], 0.04, "sonnet", "Resume improvement", 1500);
     const text = typeof result === "string" ? result : (result?.content || result?.text || "");
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("No JSON in response.");
     const edit = JSON.parse(jsonMatch[0]);
-    const msg = `PROPOSED EDIT\n\nKeyword: ${edit.chosen_keyword}\nWhere: ${edit.where}\nWhy: ${edit.rationale}\nConfidence: ${edit.confidence}\n\nBEFORE:\n${edit.before}\n\nAFTER:\n${edit.after}\n\nApply this edit and save as a new resume version?`;
-    if (confirm(msg)) {
-      let newContent = resume.content;
-      if (edit.before && newContent.includes(edit.before)) {
-        newContent = newContent.replace(edit.before, edit.after);
-      } else {
-        alert("Couldn't find the exact 'before' text. Opening the resume editor so you can apply the change manually.");
-        document.getElementById("r_edit_card").style.display = "block";
-        document.getElementById("r_edit_title").textContent = "Apply suggested edit manually";
-        document.getElementById("r_notes").value = `Address gap: ${edit.chosen_keyword} (per ${b.id})`;
-        document.getElementById("r_content").value = resume.content;
-        showTab("resumes");
-        return;
-      }
-      const newId = "v" + state.nextResumeId++;
-      state.resumes.versions.push({
-        id: newId, created_at: todayISO(), filename: newId + ".md",
-        notes: `Address gap: ${edit.chosen_keyword} (per ${b.id})`,
-        batch_id: b.id, parent: resume.id, content: newContent
-      });
-      b.resume_version_id = newId;
-      saveState();
-      alert(`Saved new resume version ${newId}, marked it as this batch's resume.`);
-      showBatchDetail(b.id);
-    }
+    // Save the proposal to the batch — persists across page navigation
+    b.resume_improvement = {
+      ...edit,
+      from_version_id: resume.id,
+      status: "pending",
+      new_version_id: null,
+      generated_at: nowISO()
+    };
+    saveState();
+    showBatchDetail(b.id);
+    showToast("Suggestion ready — see the batch page");
   } catch (e) {
     alert("Resume improvement failed: " + e.message);
   } finally {
-    btn.disabled = false; btn.textContent = "Make 1 incremental resume edit (Sonnet)";
+    btn.disabled = false;
   }
 }
 
@@ -3476,16 +3797,204 @@ function renderResumes() {
         <div>${escapeHtml(v.id)} <span class="muted small">${escapeHtml(v.created_at)}</span></div>
         <div class="muted small">${escapeHtml(v.notes || "")} ${v.parent ? `· parent: ${escapeHtml(v.parent)}` : ""} ${v.batch_id ? `· batch: ${escapeHtml(v.batch_id)}` : ""}</div>
       </div>
-      <button class="btn ghost r_edit" data-id="${v.id}">Edit</button>
-      <button class="btn danger r_del" data-id="${v.id}">Delete</button>
+      <button class="icon-btn r_gen" data-id="${v.id}" title="Generate formatted resume (Word / PDF)" aria-label="Generate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+      </button>
+      <button class="icon-btn r_edit" data-id="${v.id}" title="Edit" aria-label="Edit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+      </button>
+      <button class="icon-btn danger r_del" data-id="${v.id}" title="Delete" aria-label="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+      </button>
     `;
     root.appendChild(item);
   });
-  root.querySelectorAll(".r_edit").forEach(b => b.addEventListener("click", e => editResume(e.target.dataset.id)));
+  root.querySelectorAll(".r_edit").forEach(b => b.addEventListener("click", e => editResume(e.currentTarget.dataset.id)));
   root.querySelectorAll(".r_del").forEach(b => b.addEventListener("click", e => {
-    if (confirm("Delete this resume version?")) { state.resumes.versions = state.resumes.versions.filter(v => v.id !== e.target.dataset.id); saveState(); renderResumes(); }
+    const id = e.currentTarget.dataset.id;
+    if (confirm("Delete this resume version?")) { state.resumes.versions = state.resumes.versions.filter(v => v.id !== id); saveState(); renderResumes(); }
   }));
+  root.querySelectorAll(".r_gen").forEach(b => b.addEventListener("click", e => showGenerateResumeModal(e.currentTarget.dataset.id)));
 }
+// (Top-level Compare card removed — diff now lives inside the edit form below)
+
+function diffLines(oldText, newText) {
+  const a = (oldText || "").split("\n");
+  const b = (newText || "").split("\n");
+  const n = a.length, m = b.length;
+  // LCS table
+  const lcs = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 1; i <= n; i++) {
+    for (let j = 1; j <= m; j++) {
+      lcs[i][j] = a[i - 1] === b[j - 1] ? lcs[i - 1][j - 1] + 1 : Math.max(lcs[i - 1][j], lcs[i][j - 1]);
+    }
+  }
+  const out = [];
+  let i = n, j = m;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) { out.unshift({ type: "same", text: a[i - 1] }); i--; j--; }
+    else if (j > 0 && (i === 0 || lcs[i][j - 1] >= lcs[i - 1][j])) { out.unshift({ type: "add", text: b[j - 1] }); j--; }
+    else { out.unshift({ type: "del", text: a[i - 1] }); i--; }
+  }
+  return out;
+}
+
+// Live diff inside the resume edit form
+function renderInlineDiff() {
+  const id = document.getElementById("r_save_btn")?.dataset.id;
+  const baseSel = document.getElementById("r_diff_base");
+  const section = document.getElementById("r_diff_section");
+  const out = document.getElementById("r_diff_inline");
+  const summary = document.getElementById("r_diff_summary");
+  if (!baseSel || !section) return;
+  if (!baseSel.value) { section.style.display = "none"; return; }
+  const base = state.resumes.versions.find(v => v.id === baseSel.value);
+  if (!base) { section.style.display = "none"; return; }
+  const currentContent = document.getElementById("r_content").value;
+  const d = diffLines(base.content, currentContent);
+  const adds = d.filter(x => x.type === "add").length;
+  const dels = d.filter(x => x.type === "del").length;
+  section.style.display = "block";
+  summary.innerHTML = `<span style="color:var(--good)">+${adds}</span> / <span style="color:var(--bad)">−${dels}</span>`;
+  if (adds + dels === 0) {
+    out.innerHTML = `<div class="muted small">No changes vs ${escapeHtml(base.id)}.</div>`;
+    return;
+  }
+  out.innerHTML = d.map(x => {
+    if (x.type === "add") return `<div class="diff-add">+ ${escapeHtml(x.text) || "&nbsp;"}</div>`;
+    if (x.type === "del") return `<div class="diff-del">− ${escapeHtml(x.text) || "&nbsp;"}</div>`;
+    return `<div class="diff-same">&nbsp;&nbsp;${escapeHtml(x.text) || "&nbsp;"}</div>`;
+  }).join("");
+}
+
+function populateDiffBaseDropdown(currentId) {
+  const sel = document.getElementById("r_diff_base");
+  if (!sel) return;
+  const others = state.resumes.versions.filter(v => v.id !== currentId);
+  if (!others.length) {
+    sel.innerHTML = `<option value="">— no other versions —</option>`;
+    document.getElementById("r_diff_section").style.display = "none";
+    return;
+  }
+  sel.innerHTML = `<option value="">— select to compare —</option>` +
+    others.map(v => `<option value="${v.id}">${escapeHtml(v.id)}${v.notes ? " — " + escapeHtml(v.notes.slice(0, 40)) : ""}</option>`).join("");
+  // Default: pick parent if set, else most recent other
+  const current = state.resumes.versions.find(v => v.id === currentId);
+  if (current?.parent && others.some(o => o.id === current.parent)) sel.value = current.parent;
+  else sel.value = others[others.length - 1].id;
+}
+
+function populateTemplateDropdown(selectedId) {
+  const sel = document.getElementById("r_template_select");
+  if (!sel) return;
+  sel.innerHTML = (state.templates || []).map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}${t.is_default ? " (default)" : ""}</option>`).join("");
+  if (selectedId) sel.value = selectedId;
+}
+
+// ----- Generate formatted resume (Markdown / Word / PDF) -----
+function showGenerateResumeModal(versionId) {
+  const v = state.resumes.versions.find(x => x.id === versionId);
+  if (!v) return;
+  const html = `
+    <div class="lock-card" style="max-width:560px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">
+      <h1 style="text-align:left;margin-bottom:6px">Generate ${escapeHtml(v.id)}</h1>
+      <p class="small muted" style="margin:0 0 14px">Claude reformats your resume content using the template you defined for this version, then you download in the format you want.</p>
+      ${v.generated_html ? `<div class="notice" style="margin-bottom:10px"><b>Cached output exists.</b> Generated ${escapeHtml(v.generated_at?.slice(0,10) || "")}. Re-generate to refresh.</div>` : ""}
+      <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn" id="g_run" style="flex:1;min-width:140px;justify-content:center">${v.generated_html ? "Re-generate" : "Generate (~$0.02)"}</button>
+      </div>
+      <div id="g_preview" style="margin-top:14px"></div>
+      <div id="g_downloads" style="margin-top:14px;display:${v.generated_html ? "block" : "none"}">
+        <h3 style="margin-bottom:10px">Download</h3>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button class="btn ghost" id="g_dl_md">Markdown (.md)</button>
+          <button class="btn ghost" id="g_dl_doc">Word (.doc)</button>
+          <button class="btn ghost" id="g_dl_html">HTML</button>
+          <button class="btn ghost" id="g_print">Save as PDF (print)</button>
+        </div>
+        <p class="small muted" style="margin-top:8px">On iPhone: tap "Save as PDF" → in the print preview, tap share → <b>Save to Files</b> → choose iCloud Drive folder.</p>
+      </div>
+      <button class="btn ghost" id="g_close" style="width:100%;margin-top:18px;justify-content:center">Close</button>
+    </div>
+  `;
+  const modal = document.getElementById("help_modal");
+  modal.querySelector(".lock-card").outerHTML = html;
+  modal.style.display = "flex";
+  if (v.generated_html) document.getElementById("g_preview").innerHTML = `<details><summary class="muted small">Preview</summary><iframe srcdoc="${escapeHtml(v.generated_html)}" style="width:100%;min-height:300px;border:1px solid var(--line);border-radius:8px;margin-top:8px"></iframe></details>`;
+
+  document.getElementById("g_close").addEventListener("click", () => { modal.style.display = "none"; modal.innerHTML = `<div class="lock-card"></div>`; });
+  document.getElementById("g_run").addEventListener("click", () => regenerateResume(v));
+  document.getElementById("g_dl_md")?.addEventListener("click", () => downloadFile(`${v.id}.md`, v.content, "text/markdown"));
+  document.getElementById("g_dl_html")?.addEventListener("click", () => v.generated_html && downloadFile(`${v.id}.html`, v.generated_html, "text/html"));
+  document.getElementById("g_dl_doc")?.addEventListener("click", () => v.generated_html && downloadAsDoc(`${v.id}.doc`, v.generated_html));
+  document.getElementById("g_print")?.addEventListener("click", () => v.generated_html && printHtml(v.generated_html));
+}
+
+async function regenerateResume(v) {
+  const btn = document.getElementById("g_run");
+  if (btn) { btn.disabled = true; btn.textContent = "Generating…"; }
+  try {
+    // Resolve the template by id (with fallback to inline v.template or default)
+    const tplObj = state.templates.find(t => t.id === v.template_id) || state.templates[0];
+    const tmpl = tplObj?.description || v.template || "Single-column classic resume layout with clean serif headings and one page.";
+    const prompt = `Format this resume content according to the template instructions. Return ONLY a complete HTML document (no markdown, no commentary) with inline <style> for the layout. The HTML must be print-friendly (A4/Letter), include @page CSS for margins, and use professional typography. Keep all content verbatim — do NOT add or remove information, only reformat the layout per the template.
+
+TEMPLATE INSTRUCTIONS:
+${tmpl}
+
+RESUME CONTENT (markdown):
+${v.content}
+
+Return one complete <!DOCTYPE html>...</html> document.`;
+    const result = await askClaude(prompt, [], 0.025, "haiku", "Generate resume", 6000);
+    const text = typeof result === "string" ? result : (result?.content || result?.text || "");
+    let htmlOut = text.trim();
+    // Strip code fence if model wrapped it
+    htmlOut = htmlOut.replace(/^```(?:html)?\n/, "").replace(/\n```$/, "");
+    if (!/^<!doctype html/i.test(htmlOut) && !/^<html/i.test(htmlOut)) {
+      htmlOut = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Georgia,serif;max-width:760px;margin:30px auto;padding:0 20px;line-height:1.5}h1,h2,h3{font-weight:700}</style></head><body>${htmlOut}</body></html>`;
+    }
+    v.generated_html = htmlOut;
+    v.generated_at = nowISO();
+    saveState();
+    showToast("Resume generated");
+    showGenerateResumeModal(v.id); // re-render modal with new output
+  } catch (e) {
+    alert("Generate failed: " + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Re-generate"; }
+  }
+}
+
+function downloadFile(filename, content, mime) {
+  const blob = new Blob([content], { type: mime || "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadAsDoc(filename, htmlBody) {
+  // Use Word-flavored HTML — opens in Word and iOS Pages
+  const wrapped = `<!DOCTYPE html><html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset="utf-8"><title>${filename}</title></head><body>${htmlBody}</body></html>`;
+  const blob = new Blob(["﻿" + wrapped], { type: "application/msword" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function printHtml(html) {
+  // Open the generated HTML in a new window and trigger print
+  const w = window.open("", "_blank");
+  if (!w) { alert("Pop-up blocked. Enable popups for this site."); return; }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  // Give the new window a moment to render
+  setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 300);
+}
+
 function editResume(id) {
   const v = id ? state.resumes.versions.find(x => x.id === id) : null;
   document.getElementById("r_edit_card").style.display = "block";
@@ -3493,18 +4002,39 @@ function editResume(id) {
   document.getElementById("r_notes").value = v ? v.notes || "" : "";
   document.getElementById("r_content").value = v ? v.content : "";
   document.getElementById("r_save_btn").dataset.id = id || "";
+  // Wire template dropdown
+  populateTemplateDropdown(v ? v.template_id || "tpl_classic_orange" : (state.templates[0]?.id));
+  // Wire diff dropdown — for new versions, compare against current latest; for existing, against parent or latest other
+  populateDiffBaseDropdown(id || null);
+  renderInlineDiff();
 }
+// Wire live diff inside the edit form
+(function() {
+  let diffTimer = null;
+  document.getElementById("r_content").addEventListener("input", () => {
+    clearTimeout(diffTimer);
+    diffTimer = setTimeout(renderInlineDiff, 200);
+  });
+  document.getElementById("r_diff_base").addEventListener("change", renderInlineDiff);
+})();
+// Manage-templates link inside the edit form
+document.getElementById("r_manage_templates_link").addEventListener("click", () => {
+  document.getElementById("r_edit_card").style.display = "none";
+  showTab("settings");
+  setTimeout(() => showSettingsSection("templates"), 100);
+});
 document.getElementById("r_new_btn").addEventListener("click", () => editResume(null));
 document.getElementById("r_save_btn").addEventListener("click", () => {
   const id = document.getElementById("r_save_btn").dataset.id;
   const notes = document.getElementById("r_notes").value;
   const content = document.getElementById("r_content").value;
+  const template_id = document.getElementById("r_template_select").value;
   if (id) {
     const v = state.resumes.versions.find(x => x.id === id);
-    if (v) { v.notes = notes; v.content = content; }
+    if (v) { v.notes = notes; v.content = content; v.template_id = template_id; }
   } else {
     const newId = "v" + state.nextResumeId++;
-    state.resumes.versions.push({ id: newId, created_at: todayISO(), filename: newId + ".md", notes, batch_id: null, parent: null, content });
+    state.resumes.versions.push({ id: newId, created_at: todayISO(), filename: newId + ".md", notes, template_id, batch_id: null, parent: null, content });
   }
   saveState(); document.getElementById("r_edit_card").style.display = "none"; renderResumes();
 });
@@ -3635,6 +4165,26 @@ document.getElementById("s_balance").addEventListener("input", e => {
   updateCostCounter();
 });
 document.getElementById("settings_back_btn").addEventListener("click", showSettingsMenu);
+document.getElementById("s_template_new_btn").addEventListener("click", () => editTemplate(null));
+document.getElementById("s_template_save_btn").addEventListener("click", () => {
+  const id = document.getElementById("s_template_save_btn").dataset.id;
+  const name = document.getElementById("s_template_name").value.trim();
+  const description = document.getElementById("s_template_description").value;
+  if (!name) { alert("Name is required."); return; }
+  if (id) {
+    const t = state.templates.find(x => x.id === id);
+    if (t) { t.name = name; t.description = description; t.user_edited = true; }
+  } else {
+    const newId = "tpl_" + Date.now().toString(36);
+    state.templates.push({ id: newId, name, description, created_at: todayISO(), is_default: false, user_edited: true });
+  }
+  saveState();
+  document.getElementById("s_template_edit_card").style.display = "none";
+  renderTemplatesList();
+});
+document.getElementById("s_template_cancel_btn").addEventListener("click", () => {
+  document.getElementById("s_template_edit_card").style.display = "none";
+});
 document.getElementById("s_clear_btn").addEventListener("click", () => {
   if (confirm("Clear stored API key?")) {
     state.settings.api_key = ""; saveState(); renderSettings();
@@ -3856,6 +4406,13 @@ function setLockError(msg) {
   if (msg) { e.textContent = msg; e.style.display = "block"; }
   else { e.style.display = "none"; }
 }
+
+function showBatchHelpModal() {
+  document.getElementById("help_modal").style.display = "flex";
+}
+document.getElementById("help_modal_close").addEventListener("click", () => {
+  document.getElementById("help_modal").style.display = "none";
+});
 
 function showLockSetup() {
   document.getElementById("lock_screen").style.display = "flex";
