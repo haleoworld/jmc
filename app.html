@@ -176,8 +176,10 @@ nav.tabs button {
   min-width: 0;
   margin: 0 auto;
 }
-nav.tabs button:hover { color: var(--fg); background: var(--hover); }
-nav.tabs button.active { color: var(--accent); }
+@media (hover: hover) {
+  nav.tabs button:hover { color: var(--fg); background: var(--hover); }
+}
+nav.tabs button.active { color: var(--accent); background: transparent; }
 nav.tabs button.active .tab-icon { stroke-width: 2.4; }
 nav.tabs button .tab-icon { width: 24px; height: 24px; flex-shrink: 0; }
 
@@ -338,30 +340,26 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 .diff-del { background: rgba(223, 95, 103, .12); color: var(--bad-fg); padding: 1px 4px; border-radius: 3px; text-decoration: line-through; }
 .diff-same { color: var(--muted); }
 
-/* Floating Action Button — fixed top-right, below header */
+/* Floating Action Button — fixed bottom-right, above the bottom nav */
 .fab {
   position: fixed;
-  top: calc(env(safe-area-inset-top) + 110px);
-  right: calc(env(safe-area-inset-right) + 14px);
-  z-index: 15;
-  width: 48px; height: 48px;
+  bottom: calc(env(safe-area-inset-bottom) + 74px);
+  right: calc(env(safe-area-inset-right) + 16px);
+  z-index: 25;
+  width: 54px; height: 54px;
   border-radius: 999px;
   background: var(--accent); color: var(--accent-fg);
   border: 0; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
   transition: transform .12s, background-color .12s;
 }
 .fab:hover { background: var(--accent-strong); transform: scale(1.05); }
 .fab:active { transform: scale(.95); }
-.fab svg { width: 22px; height: 22px; }
-/* On wide screens, align with the content column edge */
+.fab svg { width: 24px; height: 24px; }
+/* On wide screens, keep it tucked to the right edge of the centered content column */
 @media (min-width: 760px) {
-  .fab { right: max(calc(env(safe-area-inset-right) + 14px), calc(50vw - 360px + 14px)); }
-}
-/* Smaller / mobile: a touch higher to avoid bumping into content */
-@media (max-width: 768px) {
-  .fab { width: 50px; height: 50px; top: calc(env(safe-area-inset-top) + 102px); }
+  .fab { right: max(calc(env(safe-area-inset-right) + 16px), calc(50vw - 360px + 16px)); }
 }
 
 /* Compact variant of queue-card used in batch detail */
@@ -652,6 +650,10 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
 
+    <div class="row" style="gap:8px;align-items:center;margin-bottom:10px">
+      <label style="margin:0;flex:0 0 auto;font-size:13px;color:var(--muted)">Screening</label>
+      <select id="q_criteria_select" style="flex:1 1 auto"></select>
+    </div>
     <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <label style="margin:0;display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:14px;color:var(--muted)"><input type="checkbox" id="q_show_rejected" style="accent-color:var(--accent)"> Show rejected</label>
       <select id="q_filter_status" style="flex:1 1 180px;max-width:240px">
@@ -864,65 +866,79 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     </div>
   </div>
 
-  <div class="card" data-settings-section="criteria">
-    <h3>Screening criteria — must-haves</h3>
-    <div class="row">
-      <div class="col">
-        <label>Title seniority keywords (any)</label>
-        <div class="chips" id="c_title_seniority"></div>
-      </div>
-      <div class="col">
-        <label>Title role keywords (any)</label>
-        <div class="chips" id="c_title_role"></div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col"><label>Comp floor (CAD)</label><input type="number" id="c_comp_floor"></div>
-      <div class="col" style="display:flex;align-items:center;gap:8px;margin-top:18px"><input type="checkbox" id="c_comp_required"><label for="c_comp_required" style="margin:0">Reject if comp not stated</label></div>
-      <div class="col"><label>Min frontend % (blank = off)</label><input type="number" id="c_min_fe" min="0" max="100" placeholder="e.g. 60"></div>
-    </div>
-    <div class="row">
-      <div class="col">
-        <label>Acceptable locations (any)</label>
-        <div class="chips" id="c_location"></div>
-      </div>
-      <div class="col">
-        <label>Acceptable tech stack (any)</label>
-        <div class="chips" id="c_stack"></div>
-      </div>
-    </div>
+  <div class="card" data-settings-section="criteria" id="crit_list_card">
+    <h3>Screening criteria sets</h3>
+    <p class="small muted" style="margin:0 0 12px">Define multiple variants of "what counts as a good role" and test them in parallel — e.g. old-fashioned enterprise vs. established tech vs. startups. Pick the active one on the Queue page; each batch records which variant it used.</p>
+    <div id="crit_list"></div>
+    <button class="btn ghost" id="crit_new_btn" style="margin-top:10px">+ New criteria set</button>
   </div>
 
-  <div class="card" data-settings-section="criteria">
-    <h3>Dealbreakers — any match = reject</h3>
-    <div class="row">
-      <div class="col">
-        <label>Blocked title keywords</label>
-        <div class="chips" id="c_title_blocked"></div>
+  <div data-settings-section="criteria" id="crit_edit_wrap" style="display:none">
+    <button class="btn ghost" id="crit_back_btn" style="margin-bottom:12px">← Back to sets</button>
+    <div class="card">
+      <div class="row"><div class="col"><label>Set name</label><input type="text" id="crit_name" placeholder="e.g. Old-fashioned enterprise"></div></div>
+    </div>
+    <div class="card">
+      <h3>Must-haves</h3>
+      <div class="row">
+        <div class="col">
+          <label>Title seniority keywords (any)</label>
+          <div class="chips" id="c_title_seniority"></div>
+        </div>
+        <div class="col">
+          <label>Title role keywords (any)</label>
+          <div class="chips" id="c_title_role"></div>
+        </div>
       </div>
-      <div class="col">
-        <label>On-call / production-support phrases (negation-aware: "no on-call" is fine)</label>
-        <div class="chips" id="c_oncall"></div>
+      <div class="row">
+        <div class="col"><label>Comp floor (CAD)</label><input type="number" id="c_comp_floor"></div>
+        <div class="col" style="display:flex;align-items:center;gap:8px;margin-top:18px"><input type="checkbox" id="c_comp_required"><label for="c_comp_required" style="margin:0">Reject if comp not stated</label></div>
+        <div class="col"><label>Min frontend % (blank = off)</label><input type="number" id="c_min_fe" min="0" max="100" placeholder="e.g. 60"></div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Acceptable locations (any)</label>
+          <div class="chips" id="c_location"></div>
+        </div>
+        <div class="col">
+          <label>Acceptable tech stack (any)</label>
+          <div class="chips" id="c_stack"></div>
+        </div>
       </div>
     </div>
-    <div class="row">
-      <div class="col">
-        <label>Excluded keywords</label>
-        <div class="chips" id="c_kw_excluded"></div>
-      </div>
-      <div class="col">
-        <label>Excluded companies</label>
-        <div class="chips" id="c_co_excluded"></div>
-      </div>
-    </div>
-  </div>
 
-  <div class="card" data-settings-section="criteria">
-    <h3>Target companies (boost only — non-blocking)</h3>
-    <div class="chips" id="c_target_companies"></div>
-    <div class="row" style="margin-top:10px">
-      <div class="col"><label>Target persona (used by LLM for nuanced "is this a fit?" judgments)</label><textarea id="c_target_persona" style="min-height:60px"></textarea></div>
+    <div class="card">
+      <h3>Dealbreakers — any match = reject</h3>
+      <div class="row">
+        <div class="col">
+          <label>Blocked title keywords</label>
+          <div class="chips" id="c_title_blocked"></div>
+        </div>
+        <div class="col">
+          <label>On-call / production-support phrases (negation-aware: "no on-call" is fine)</label>
+          <div class="chips" id="c_oncall"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <label>Excluded keywords</label>
+          <div class="chips" id="c_kw_excluded"></div>
+        </div>
+        <div class="col">
+          <label>Excluded companies</label>
+          <div class="chips" id="c_co_excluded"></div>
+        </div>
+      </div>
     </div>
+
+    <div class="card">
+      <h3>Target companies (boost only — non-blocking)</h3>
+      <div class="chips" id="c_target_companies"></div>
+      <div class="row" style="margin-top:10px">
+        <div class="col"><label>Target persona (used by LLM for nuanced "is this a fit?" judgments)</label><textarea id="c_target_persona" style="min-height:60px"></textarea></div>
+      </div>
+    </div>
+    <div class="row" style="margin-bottom:20px"><button class="btn" id="crit_done_btn">Done</button></div>
   </div>
 
   <div class="card" data-settings-section="templates">
@@ -1134,8 +1150,52 @@ KEEP IT TIGHT: 10.5pt body, 1.42 line-height, modest gaps, full page width. A st
   is_default: true
 };
 
+// Shared base for all screening-criteria variants (must-haves + dealbreakers).
+const BASE_CRITERIA = {
+  title_seniority: ["senior", "sr."],
+  title_role: ["frontend", "front-end", "ui", "web", "javascript", "typescript", "react", "angular", "vue"],
+  comp_floor: 100000,
+  comp_required: false,
+  location_any: ["toronto", "gta", "greater toronto", "mississauga", "markham", "vaughan", "remote", "canada remote"],
+  stack_any: ["react", "angular", "vue", "svelte", "javascript", "typescript"],
+  title_blocked: ["principal", "staff engineer", "manager", "director", "vp", "head of", "tech lead", "architect"],
+  oncall_phrases: ["on-call", "on call rotation", "pager rotation", "24/7 support", "weekend rotation", "rotating shifts", "after-hours support"],
+  kw_excluded: [],
+  co_excluded: [],
+  min_frontend_percent: null
+};
+function cloneObj(o) { return JSON.parse(JSON.stringify(o)); }
+// Three starter variants the user can edit/rename/delete.
+function makeCriteriaSets() {
+  return [
+    { id: "crit_enterprise", name: "Old-fashioned enterprise", ...cloneObj(BASE_CRITERIA),
+      target_companies: ["CAA","Sun Life","Manulife","Metrolinx","Canada Post","Torstar","Loblaws","Canadian Tire","RBC","TD","BMO","Scotiabank","CIBC","OMERS","OTPP","Ontario Government","Hydro One","Rogers","Bell","Telus"],
+      target_persona: "Old-fashioned, established, financially stable Canadian enterprise: banks, insurance, telco, retail, transit, healthcare, public sector. Avoid hyper-growth startups, ad-tech, crypto/web3, gambling." },
+    { id: "crit_tech", name: "Established tech", ...cloneObj(BASE_CRITERIA),
+      target_companies: ["Shopify","Wealthsimple","Square","Stripe","Atlassian","Coinbase","OpenText","Faire","1Password","Clio","Hootsuite","Vidyard","Ada","Jobber","Lightspeed","Benevity","Visier","Kira"],
+      target_persona: "Established, well-funded technology companies — post Series C scale-ups or public tech with a strong frontend/product culture and stable footing. Not pre-seed startups." },
+    { id: "crit_startup", name: "Startups", ...cloneObj(BASE_CRITERIA),
+      target_companies: [],
+      target_persona: "Early-to-growth-stage startups (seed to Series B). Higher risk/reward, smaller teams, broader scope. Still avoid on-call-heavy / 24-7 production-support roles." }
+  ];
+}
+
 const LS_KEY = "phone_screen_app_v1";
 let state = loadState();
+// Returns the criteria set currently active for queue screening
+function activeCriteria() {
+  const sets = state.criteria_sets || [];
+  return sets.find(c => c.id === state.active_criteria_id) || sets[0];
+}
+function criteriaById(id) { return (state.criteria_sets || []).find(c => c.id === id); }
+// The criteria a given job should be screened against: its batch's set if batched, else the active set.
+function criteriaForJob(j) {
+  if (j && j.batch_id) {
+    const b = state.batches.find(x => x.id === j.batch_id);
+    if (b && b.criteria_id) { const cs = criteriaById(b.criteria_id); if (cs) return cs; }
+  }
+  return activeCriteria();
+}
 let sessionCost = 0;
 
 function loadState() {
@@ -1149,6 +1209,26 @@ function loadState() {
       if (s.jobs) s.jobs.forEach(j => {
         if (!("fe_percent" in j)) j.fe_percent = null;
         if (!Array.isArray(j.qa)) j.qa = [];
+      });
+      // Migrate single `criteria` → `criteria_sets` (multi-variant)
+      if (s.criteria && !s.criteria_sets) {
+        s.criteria_sets = [{ id: "crit_enterprise", name: "Old-fashioned enterprise", ...s.criteria }];
+        // seed the two additional starter variants (tech, startup)
+        makeCriteriaSets().slice(1).forEach(v => s.criteria_sets.push(v));
+        s.active_criteria_id = "crit_enterprise";
+        delete s.criteria;
+      }
+      if (!Array.isArray(s.criteria_sets) || !s.criteria_sets.length) {
+        s.criteria_sets = makeCriteriaSets();
+      }
+      if (!s.active_criteria_id || !s.criteria_sets.find(c => c.id === s.active_criteria_id)) {
+        s.active_criteria_id = s.criteria_sets[0].id;
+      }
+      s.criteria_sets.forEach(cs => {
+        if (!("min_frontend_percent" in cs)) cs.min_frontend_percent = null;
+        if (!Array.isArray(cs.kw_excluded)) cs.kw_excluded = [];
+        if (!Array.isArray(cs.co_excluded)) cs.co_excluded = [];
+        if (!cs.name) cs.name = "Untitled set";
       });
       if (s.resumes?.versions) s.resumes.versions.forEach(v => {
         if (typeof v.template !== "string") v.template = "";
@@ -1212,21 +1292,8 @@ function defaultState() {
       prof_bio_text: "",
       target_titles: ["Senior Frontend Engineer", "Senior Frontend Developer", "Senior Web Developer", "Senior UI Engineer"]
     },
-    criteria: {
-      title_seniority: ["senior", "sr."],
-      title_role: ["frontend", "front-end", "ui", "web", "javascript", "typescript", "react", "angular", "vue"],
-      comp_floor: 100000,
-      comp_required: false,
-      location_any: ["toronto", "gta", "greater toronto", "mississauga", "markham", "vaughan", "remote", "canada remote"],
-      stack_any: ["react", "angular", "vue", "svelte", "javascript", "typescript"],
-      title_blocked: ["principal", "staff engineer", "manager", "director", "vp", "head of", "tech lead", "architect"],
-      oncall_phrases: ["on-call", "on call rotation", "pager rotation", "24/7 support", "weekend rotation", "rotating shifts", "after-hours support"],
-      kw_excluded: [],
-      co_excluded: [],
-      min_frontend_percent: null,
-      target_companies: ["CAA","Sun Life","Manulife","Metrolinx","Canada Post","Torstar","Loblaws","Canadian Tire","RBC","TD","BMO","Scotiabank","CIBC","OMERS","OTPP","Ontario Government","Hydro One","Rogers","Bell","Telus"],
-      target_persona: "Old-fashioned, established, financially stable Canadian enterprise: banks, insurance, telco, retail, transit, healthcare, public sector. Avoid hyper-growth startups, ad-tech, crypto/web3, gambling."
-    },
+    criteria_sets: makeCriteriaSets(),
+    active_criteria_id: "crit_enterprise",
     jobs: [],
     batches: [],
     resumes: {
@@ -1639,6 +1706,7 @@ function showSettingsSection(key) {
   populateSettingsFields();
   if (key === "usage") renderUsageSummary();
   if (key === "templates") renderTemplatesList();
+  if (key === "criteria") showCriteriaListView();
 }
 
 function populateSettingsFields() {
@@ -1804,8 +1872,11 @@ document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("cl
 // ============================================================================
 // SETUP view
 // ============================================================================
+let editingCriteria = null; // the criteria set currently open in the edit form
+
 function renderSetup() {
-  const p = state.profile, c = state.criteria;
+  // Profile fields only — criteria now lives in its own list/edit flow.
+  const p = state.profile;
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ""; };
   set("p_full_name", p.full_name); set("p_email", p.email); set("p_mobile", p.mobile);
   set("p_linkedin", p.linkedin); set("p_location", p.location); set("p_work_auth", p.work_auth);
@@ -1813,7 +1884,13 @@ function renderSetup() {
   set("p_life_bio", p.life_bio_path); set("p_prof_bio", p.prof_bio_path);
   set("p_life_bio_text", p.life_bio_text); set("p_prof_bio_text", p.prof_bio_text);
   set("p_target_titles", (p.target_titles || []).join(", "));
-  set("c_comp_floor", c.comp_floor);
+}
+
+// Renders the criteria edit form for a given set (binds chips + name + inputs to it)
+function renderCriteriaForm(c) {
+  if (!c) return;
+  document.getElementById("crit_name").value = c.name || "";
+  document.getElementById("c_comp_floor").value = c.comp_floor || "";
   document.getElementById("c_comp_required").checked = !!c.comp_required;
   document.getElementById("c_min_fe").value = c.min_frontend_percent == null ? "" : c.min_frontend_percent;
   renderChips("c_title_seniority", c.title_seniority, v => { c.title_seniority = v; saveState(); });
@@ -1826,6 +1903,64 @@ function renderSetup() {
   renderChips("c_co_excluded", c.co_excluded, v => { c.co_excluded = v; saveState(); });
   renderChips("c_target_companies", c.target_companies, v => { c.target_companies = v; saveState(); });
   document.getElementById("c_target_persona").value = c.target_persona || "";
+}
+
+// Criteria-set list (with edit/delete + active marker)
+function renderCriteriaList() {
+  const root = document.getElementById("crit_list");
+  if (!root) return;
+  root.innerHTML = (state.criteria_sets || []).map(cs => {
+    const isActive = cs.id === state.active_criteria_id;
+    return `<div class="list-item" data-cid="${escapeHtml(cs.id)}">
+      <div class="grow">
+        <div><b>${escapeHtml(cs.name)}</b>${isActive ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">active</span>` : ""}</div>
+        <div class="muted small">${(cs.target_companies||[]).length} target companies · floor ${cs.comp_floor ? "$"+cs.comp_floor/1000+"k" : "—"}${cs.min_frontend_percent ? " · FE ≥ "+cs.min_frontend_percent+"%" : ""}</div>
+      </div>
+      <button class="icon-btn c_edit" data-id="${escapeHtml(cs.id)}" title="Edit" aria-label="Edit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+      </button>
+      <button class="icon-btn danger c_del" data-id="${escapeHtml(cs.id)}" title="Delete" aria-label="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+      </button>
+    </div>`;
+  }).join("");
+  root.querySelectorAll(".c_edit").forEach(b => b.addEventListener("click", e => openCriteriaEditor(e.currentTarget.dataset.id)));
+  root.querySelectorAll(".c_del").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    if ((state.criteria_sets || []).length <= 1) { alert("Keep at least one criteria set."); return; }
+    const cs = criteriaById(id);
+    if (!confirm(`Delete criteria set "${cs.name}"?`)) return;
+    state.criteria_sets = state.criteria_sets.filter(x => x.id !== id);
+    if (state.active_criteria_id === id) state.active_criteria_id = state.criteria_sets[0].id;
+    // batches referencing this set fall back to active
+    state.batches.forEach(bch => { if (bch.criteria_id === id) bch.criteria_id = state.active_criteria_id; });
+    saveState();
+    renderCriteriaList();
+  }));
+}
+
+function showCriteriaListView() {
+  editingCriteria = null;
+  document.getElementById("crit_list_card").style.display = "block";
+  document.getElementById("crit_edit_wrap").style.display = "none";
+  renderCriteriaList();
+}
+function openCriteriaEditor(id) {
+  const cs = id ? criteriaById(id) : null;
+  if (id && !cs) return;
+  if (!id) {
+    // new set
+    const newId = "crit_" + Date.now().toString(36);
+    const fresh = { id: newId, name: "New criteria set", ...cloneObj(BASE_CRITERIA), target_companies: [], target_persona: "" };
+    state.criteria_sets.push(fresh);
+    saveState();
+    editingCriteria = fresh;
+  } else {
+    editingCriteria = cs;
+  }
+  document.getElementById("crit_list_card").style.display = "none";
+  document.getElementById("crit_edit_wrap").style.display = "block";
+  renderCriteriaForm(editingCriteria);
 }
 
 function bindSetupInputs() {
@@ -1846,20 +1981,29 @@ function bindSetupInputs() {
     state.settings.default_questions = e.target.value.split("\n").map(s => s.trim()).filter(Boolean);
     saveState();
   });
+  // Criteria inputs write to whichever set is currently open in the editor.
+  document.getElementById("crit_name").addEventListener("input", e => {
+    if (editingCriteria) { editingCriteria.name = e.target.value; saveState(); }
+  });
   document.getElementById("c_comp_floor").addEventListener("input", e => {
-    state.criteria.comp_floor = parseInt(e.target.value) || 0; saveState();
+    if (editingCriteria) { editingCriteria.comp_floor = parseInt(e.target.value) || 0; saveState(); }
   });
   document.getElementById("c_comp_required").addEventListener("change", e => {
-    state.criteria.comp_required = e.target.checked; saveState();
+    if (editingCriteria) { editingCriteria.comp_required = e.target.checked; saveState(); }
   });
   document.getElementById("c_min_fe").addEventListener("input", e => {
+    if (!editingCriteria) return;
     const v = e.target.value.trim();
-    state.criteria.min_frontend_percent = v === "" ? null : Math.max(0, Math.min(100, parseInt(v) || 0));
+    editingCriteria.min_frontend_percent = v === "" ? null : Math.max(0, Math.min(100, parseInt(v) || 0));
     saveState();
   });
   document.getElementById("c_target_persona").addEventListener("input", e => {
-    state.criteria.target_persona = e.target.value; saveState();
+    if (editingCriteria) { editingCriteria.target_persona = e.target.value; saveState(); }
   });
+  // Criteria list buttons
+  document.getElementById("crit_new_btn").addEventListener("click", () => openCriteriaEditor(null));
+  document.getElementById("crit_back_btn").addEventListener("click", showCriteriaListView);
+  document.getElementById("crit_done_btn").addEventListener("click", showCriteriaListView);
 }
 
 function renderChips(containerId, items, onChange) {
@@ -2578,7 +2722,8 @@ function buildJobFromIntake({ urlOnly = false } = {}) {
   };
   // Only run screening if there's substantive content
   if ((job.raw_text && job.raw_text.length > 50) || job.tech_stack.length || job.requirements.length) {
-    job.screening = screenJob(job, state.criteria);
+    job.screening = screenJob(job, activeCriteria());
+    job.screened_against = state.active_criteria_id;
   } else {
     job.screening = { qualified: false, reasons_pass: [], reasons_fail: ["no JD content yet — paste raw JD text and re-screen"], target_match: [] };
   }
@@ -2703,6 +2848,13 @@ function renderQueue() {
   // Always show the list pane when (re)rendering
   document.getElementById("q_list_view").style.display = "block";
   document.getElementById("q_detail_view").style.display = "none";
+  document.getElementById("q_intake_view").style.display = "none";
+  // Populate the active criteria-set selector
+  const csel = document.getElementById("q_criteria_select");
+  if (csel) {
+    csel.innerHTML = (state.criteria_sets || []).map(cs => `<option value="${escapeHtml(cs.id)}">${escapeHtml(cs.name)}</option>`).join("");
+    csel.value = state.active_criteria_id;
+  }
   const root = document.getElementById("q_list");
   const showRejected = document.getElementById("q_show_rejected").checked;
   const filter = document.getElementById("q_filter_status").value;
@@ -2785,6 +2937,24 @@ function updateSelectedCount() {
 }
 document.getElementById("q_show_rejected").addEventListener("change", renderQueue);
 document.getElementById("q_filter_status").addEventListener("change", renderQueue);
+document.getElementById("q_criteria_select").addEventListener("change", e => {
+  state.active_criteria_id = e.target.value;
+  const cs = activeCriteria();
+  // Re-screen only QUEUED jobs (batched ones keep their batch's variant)
+  const queued = state.jobs.filter(j => j.status === "queued");
+  let q = 0, r = 0;
+  queued.forEach(j => {
+    if (!((j.raw_text && j.raw_text.length > 50) || (j.tech_stack||[]).length || (j.requirements||[]).length)) return;
+    const before = !!j.screening?.qualified;
+    j.screening = screenJob(j, cs);
+    j.screened_against = cs.id;
+    if (!before && j.screening.qualified) q++;
+    if (before && !j.screening.qualified) r++;
+  });
+  saveState();
+  showToast(`Active set: ${cs.name}. Re-screened ${queued.length} queued jobs (+${q} / −${r}).`, 3500);
+  renderQueue();
+});
 document.getElementById("q_select_all").addEventListener("click", () => {
   const boxes = document.querySelectorAll(".q_chk");
   if (!boxes.length) { showToast("No queued jobs to select. Turn on \"Show rejected\" or change the filter."); return; }
@@ -2794,11 +2964,13 @@ document.getElementById("q_select_all").addEventListener("click", () => {
 });
 document.getElementById("q_rescreen_all").addEventListener("click", () => {
   if (!state.jobs.length) { showToast("No jobs in queue"); return; }
-  if (!confirm(`Re-run screening on all ${state.jobs.length} jobs using the current criteria?`)) return;
+  const cs = activeCriteria();
+  if (!confirm(`Re-run screening on all ${state.jobs.length} jobs using criteria set "${cs.name}"?`)) return;
   let flippedToQualified = 0, flippedToRejected = 0;
   state.jobs.forEach(j => {
     const before = !!j.screening?.qualified;
-    j.screening = screenJob(j, state.criteria);
+    j.screening = screenJob(j, cs);
+    j.screened_against = cs.id;
     const after = j.screening.qualified;
     if (!before && after) flippedToQualified++;
     if (before && !after) flippedToRejected++;
@@ -2814,6 +2986,7 @@ document.getElementById("q_create_batch").addEventListener("click", () => {
   const batch = {
     id, created_at: nowISO(), status: "draft",
     job_ids: ids, resume_version_id: null, analysis: null,
+    criteria_id: state.active_criteria_id,
     submitted_at: null
   };
   state.batches.push(batch);
@@ -2997,7 +3170,7 @@ function renderJobDetail(j, editMode) {
       j.interview_process = document.getElementById("e_iv").value.trim();
       j.notes = document.getElementById("e_notes").value;
       j.raw_text = document.getElementById("e_raw").value;
-      j.screening = screenJob(j, state.criteria);
+      { const cs = criteriaForJob(j); j.screening = screenJob(j, cs); j.screened_against = cs.id; }
       saveState();
       showToast(`Saved. ${j.screening.qualified ? "Qualified" : "Rejected"}.`);
       renderJobDetail(j, false);
@@ -3140,10 +3313,12 @@ Return JSON only.`;
   `;
   document.getElementById("d_rescreen").addEventListener("click", () => {
     const before = !!j.screening?.qualified;
-    j.screening = screenJob(j, state.criteria);
+    const cs = criteriaForJob(j);
+    j.screening = screenJob(j, cs);
+    j.screened_against = cs.id;
     saveState();
     const after = j.screening.qualified;
-    showToast(after === before ? `Re-screened: ${after ? "Qualified" : "Rejected"}` : (after ? "✓ Now qualified!" : "✗ Now rejected"));
+    showToast(after === before ? `Re-screened (${cs.name}): ${after ? "Qualified" : "Rejected"}` : (after ? "✓ Now qualified!" : "✗ Now rejected"));
     renderJobDetail(j, false);
   });
   document.getElementById("d_edit").addEventListener("click", () => renderJobDetail(j, true));
@@ -3305,10 +3480,16 @@ function showBatchDetail(batchId) {
   const root = document.getElementById("b_detail");
   const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
   const resumeOptions = state.resumes.versions.map(v => `<option value="${v.id}" ${b.resume_version_id === v.id ? "selected" : ""}>${escapeHtml(v.id)} — ${escapeHtml(v.notes || "")}</option>`).join("");
+  const critOptions = (state.criteria_sets || []).map(cs => `<option value="${escapeHtml(cs.id)}" ${b.criteria_id === cs.id ? "selected" : ""}>${escapeHtml(cs.name)}</option>`).join("");
   root.innerHTML = `
     <div class="card">
       <h3>${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></h3>
       <div class="row" style="align-items:flex-end;gap:10px">
+        <div class="col" style="flex:1 1 auto"><label>Screening criteria set</label>
+          <select id="b_criteria_sel">${critOptions}</select>
+        </div>
+      </div>
+      <div class="row" style="align-items:flex-end;gap:10px;margin-top:8px">
         <div class="col" style="flex:1 1 auto"><label>Resume version</label>
           <select id="b_resume_sel"><option value="">— pick a resume —</option>${resumeOptions}</select>
         </div>
@@ -3345,6 +3526,21 @@ function showBatchDetail(batchId) {
 
   document.getElementById("b_resume_sel").addEventListener("change", e => {
     b.resume_version_id = e.target.value || null; saveState();
+  });
+  document.getElementById("b_criteria_sel").addEventListener("change", e => {
+    b.criteria_id = e.target.value;
+    const cs = criteriaById(b.criteria_id);
+    if (confirm(`Re-screen this batch's jobs against "${cs.name}"?`)) {
+      b.job_ids.forEach(jid => {
+        const j = state.jobs.find(x => x.id === jid);
+        if (!j) return;
+        j.screening = screenJob(j, cs);
+        j.screened_against = cs.id;
+      });
+      showToast(`Batch re-screened against ${cs.name}`);
+    }
+    saveState();
+    renderBatchJobs(b);
   });
   document.getElementById("b_ats_btn").addEventListener("click", () => runATSCheck(b));
   document.getElementById("b_analyzer_btn").addEventListener("click", () => runBatchAnalyzer(b));
