@@ -1092,44 +1092,44 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 const DEFAULT_TEMPLATE_CLASSIC = {
   id: "tpl_classic_orange",
   name: "Classic single-column (orange headers)",
-  description: `Single-column professional resume, sans-serif throughout (Arial / Helvetica / Segoe UI / Roboto). White background, dark text (#222). Target one page if possible, but allow content to breathe — do NOT compress to fit at the cost of readability. A4/Letter @page with 0.75in margins on all sides. Max-width 780px centered when displayed on screen. Body font 11.5pt, line-height 1.55.
+  description: `Single-column professional resume, sans-serif throughout (Arial / Helvetica / Segoe UI / Roboto). PURE WHITE background everywhere — set BOTH html and body to background:#ffffff. No gray page backdrop, no colored background, no centered "card". Dark text (#222). Body font 10.5pt, line-height 1.42. Target ONE page, two at most. A4.
+
+PAGE / PRINT (exact):
+- @page { size: A4; margin: 0; }
+- html, body { background:#ffffff; }
+- body { margin:0; padding: 13mm 15mm; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+- Do NOT use max-width or margin:0 auto centering. Content fills the full padded page width edge-to-edge inside the padding. (A narrow centered column wastes width and adds pages — avoid it.)
 
 HEADER
-- Name centered, h1, ~30pt bold, color #222, margin-bottom 8px.
-- Contact line below name, centered, ~10.5pt, separated by " | ":
-  Format: "EMAIL: address | MOBILE: phone | LINKEDIN: url | ADDRESS: city, region, country"
-  Labels (EMAIL, MOBILE, LINKEDIN, ADDRESS) bold uppercase, values regular weight.
-  Allow wrapping to 2 lines if needed (centered).
-- Thin gray (#ccc) horizontal rule below the contact row, margin-top 16px, margin-bottom 22px.
+- Name centered, ~24pt bold, color #222, margin: 0 0 5px.
+- Contact line centered, ~9.5pt, separated by " | ":
+  "EMAIL: address | MOBILE: phone | LINKEDIN: url | ADDRESS: city, region, country"
+  Labels (EMAIL, MOBILE, LINKEDIN, ADDRESS) bold uppercase, values regular. Keep to 1-2 lines.
+- Thin #ccc horizontal rule, margin: 10px 0 14px.
 
-SECTION HEADERS (e.g. PROFESSIONAL SUMMARY, TECHNICAL SKILLS, PROFESSIONAL EXPERIENCE, EDUCATION & CERTIFICATIONS)
-- Uppercase, bold, accent color #E8A33D (orange-yellow), ~13.5pt, letter-spacing 0.05em, margin-top 20px, margin-bottom 12px.
-- A thin gray (#ccc) horizontal rule AFTER each section's content (between sections), margin-top 20px.
+SECTION HEADERS (PROFESSIONAL SUMMARY, TECHNICAL SKILLS, PROFESSIONAL EXPERIENCE, EDUCATION & CERTIFICATIONS)
+- Uppercase, bold, color #E8A33D (orange-yellow), ~12pt, letter-spacing 0.04em, margin: 14px 0 8px.
+- Thin #ccc horizontal rule between sections (margin-top 14px before the next header).
 
-PROFESSIONAL SUMMARY
-- 3-4 line paragraph. Bold inline highlights for key tech (Angular (14+), React, TypeScript) and achievement claims (employer names, numeric achievements). Paragraph line-height 1.55.
+PROFESSIONAL SUMMARY: 3-4 line paragraph, line-height 1.42. Bold inline highlights for key tech (Angular (14+), React, TypeScript) and achievement claims (employer names, numbers).
 
-TECHNICAL SKILLS
-- Bulleted list with 3-4 categories. Each bullet starts with a bold category label + colon (e.g. "Expertise:", "Architecture:", "Cloud & Tools:", "Quality:"), followed by comma-separated items, ending with a period.
-- 6px vertical spacing between category bullets.
+TECHNICAL SKILLS: bullet list, 3-4 categories. Each bullet starts with a bold "Category:" label (Expertise:, Architecture:, Cloud & Tools:, Quality:) then comma-separated items. 3px between bullets.
 
 PROFESSIONAL EXPERIENCE
-- Each role has a HEADER ROW using flexbox: left side "<Company>, <Department> - <Role>" (bold, flexible width, NO wrap to column) — location can be appended after the role name with a "|" if it fits, OR placed on a small second sub-line in regular muted text just below the bold company line. Right side: date range (italic, gray #555, no-wrap).
-- 6px spacing between header row and the first bullet.
-- 2-4 achievement bullets per role. Bullets have 7px spacing between them. Each bullet line-height 1.55.
-- Bold inline highlights on metrics (percentages, throughput numbers, "1M+", "85%", etc.) and tech names within bullets.
-- 18px gap between separate roles.
+- Each role header is a flex row: LEFT = "<Company>, <Department> - <Role> | <Location>" (bold, takes remaining width). RIGHT = date range (italic, gray #555, white-space:nowrap, padding-left 12px).
+- 4px from header to first bullet. Bullets 4px apart, line-height 1.42.
+- Bold inline highlights on metrics (%, "1M+", "85%") and tech names.
+- 10px gap between roles.
 
 EDUCATION & CERTIFICATIONS
-- One line for the degree: "<Degree>" (bold) + " | <University>" (regular) on the left, date (italic, gray) right-aligned.
-- 10px spacing, then "Certifications:" (bold) followed by comma-separated certifications wrapping naturally.
+- Degree line: "<Degree>" (bold) + " | <University>" (regular) on left, date (italic gray) right-aligned (flex row).
+- Then "Certifications:" (bold) + comma-separated list.
 
-BULLETS
-- Small filled circle markers (•), 22px left indent, 10px gap between marker and text.
+BULLETS: • markers, 16px left indent, 8px marker-to-text gap.
 
-OVERALL: prioritize recruiter readability. Generous line-height (1.55), comfortable 0.75in margins, clear visual hierarchy. Do not cram. If the content naturally exceeds one page, keep the breathing room and let it flow to two pages rather than shrinking everything.
+KEEP IT TIGHT: 10.5pt body, 1.42 line-height, modest gaps, full page width. A standard resume should fit one page (two max). Do not pad it out.
 `,
-  content_version: 2,
+  content_version: 3,
   created_at: "2026-04-27",
   is_default: true
 };
@@ -3905,14 +3905,16 @@ function showGenerateResumeModal(versionId) {
       </div>
       <div id="g_preview" style="margin-top:14px"></div>
       <div id="g_downloads" style="margin-top:14px;display:${v.generated_html ? "block" : "none"}">
-        <h3 style="margin-bottom:10px">Download</h3>
+        <div class="row"><div class="col"><label>File name (no extension)</label><input type="text" id="g_filename" value="${escapeHtml(defaultResumeFilename(v))}"></div></div>
+        <h3 style="margin:14px 0 10px">Download</h3>
         <div class="row" style="gap:8px;flex-wrap:wrap">
-          <button class="btn ghost" id="g_dl_md">Markdown (.md)</button>
-          <button class="btn ghost" id="g_dl_doc">Word (.doc)</button>
+          <button class="btn" id="g_dl_doc">Word (.doc) — clean PDF via Pages</button>
+          <button class="btn ghost" id="g_print">Print (PDF)</button>
           <button class="btn ghost" id="g_dl_html">HTML</button>
-          <button class="btn ghost" id="g_print">Save as PDF (print)</button>
+          <button class="btn ghost" id="g_dl_md">Markdown (.md)</button>
         </div>
-        <p class="small muted" style="margin-top:8px">On iPhone: <b>Save as PDF</b> opens the iOS print sheet (the app stays open behind it). In the preview, tap the <b>share</b> icon → <b>Save to Files</b> → iCloud Drive. The PDF has no date/URL/page-number headers. If printing acts up on your device, use <b>Word (.doc)</b> — it opens in Pages where you can export a clean PDF.</p>
+        <p class="small muted" style="margin-top:8px"><b>For a clean recruiter-ready PDF on iPhone:</b> tap <b>Word (.doc)</b> → Save to Files → open it in <b>Pages</b> → ••• → <b>Export → PDF</b>. That gives a header-free PDF with selectable text (ATS-friendly).</p>
+        <p class="small muted" style="margin-top:6px"><b>Note on Print:</b> iOS Safari always stamps the date, app URL, and "Page X of Y" in the print margins — that can't be removed from a web page on iPhone. Use it only if you don't mind those, or print from a Mac (where you can untick "Headers and Footers").</p>
       </div>
       <button class="btn ghost" id="g_close" style="width:100%;margin-top:18px;justify-content:center">Close</button>
     </div>
@@ -3925,18 +3927,32 @@ function showGenerateResumeModal(versionId) {
       <details open>
         <summary class="muted small">Preview (scaled to fit)</summary>
         <div id="g_preview_wrap" style="overflow:hidden;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff">
-          <iframe id="g_preview_frame" srcdoc="${escapeHtml(v.generated_html)}" scrolling="no" style="border:0;display:block;background:#fff"></iframe>
+          <iframe id="g_preview_frame" srcdoc="${escapeHtml(injectPrintReset(v.generated_html))}" scrolling="no" style="border:0;display:block;background:#fff"></iframe>
         </div>
       </details>`;
     requestAnimationFrame(scaleResumePreview);
   }
 
+  const fname = () => {
+    const el = document.getElementById("g_filename");
+    const v2 = (el && el.value.trim()) || defaultResumeFilename(v);
+    return v2.replace(/[\/\\:*?"<>|]/g, "").trim() || "Resume";
+  };
+
   document.getElementById("g_close").addEventListener("click", () => { modal.style.display = "none"; modal.innerHTML = `<div class="lock-card"></div>`; });
   document.getElementById("g_run").addEventListener("click", () => regenerateResume(v));
-  document.getElementById("g_dl_md")?.addEventListener("click", () => downloadFile(`${v.id}.md`, v.content, "text/markdown"));
-  document.getElementById("g_dl_html")?.addEventListener("click", () => v.generated_html && downloadFile(`${v.id}.html`, v.generated_html, "text/html"));
-  document.getElementById("g_dl_doc")?.addEventListener("click", () => v.generated_html && downloadAsDoc(`${v.id}.doc`, v.generated_html));
-  document.getElementById("g_print")?.addEventListener("click", () => v.generated_html && printHtml(v.generated_html));
+  document.getElementById("g_dl_md")?.addEventListener("click", () => downloadFile(`${fname()}.md`, v.content, "text/markdown"));
+  document.getElementById("g_dl_html")?.addEventListener("click", () => v.generated_html && downloadFile(`${fname()}.html`, v.generated_html, "text/html"));
+  document.getElementById("g_dl_doc")?.addEventListener("click", () => v.generated_html && downloadAsDoc(`${fname()}.doc`, v.generated_html));
+  document.getElementById("g_print")?.addEventListener("click", () => v.generated_html && printHtml(v.generated_html, fname()));
+}
+
+// Default download name: "Resume - {full name} {version notes}"
+function defaultResumeFilename(v) {
+  const name = (state.profile.full_name || "Resume").trim();
+  const notes = (v.notes || v.id || "").trim();
+  const base = `Resume - ${name}${notes ? " " + notes : ""}`;
+  return base.replace(/[\/\\:*?"<>|]/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
 async function regenerateResume(v) {
@@ -4017,10 +4033,9 @@ function scaleResumePreview() {
 // by zeroing @page margins and moving margins to body padding.
 const PRINT_RESET_CSS = `<style id="__print_reset">
 @page { size: A4; margin: 0; }
+html, body { background: #ffffff !important; }
 @media print {
-  html, body { margin: 0 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  /* Guarantee printable margins via padding so content isn't edge-to-edge */
-  body { padding: 16mm 15mm !important; box-sizing: border-box !important; }
+  html, body { margin: 0 !important; background: #ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 </style>`;
 
@@ -4032,8 +4047,15 @@ function injectPrintReset(html) {
 
 // Print using a HIDDEN iframe so the app screen is never replaced (critical for
 // home-screen / standalone PWA mode where there's no browser back button).
-function printHtml(html) {
-  const doc = injectPrintReset(html);
+// `title` becomes the suggested PDF filename in the OS print/save dialog.
+function printHtml(html, title) {
+  let doc = injectPrintReset(html);
+  if (title) {
+    const titleTag = `<title>${escapeHtml(title)}</title>`;
+    if (/<title>[\s\S]*?<\/title>/i.test(doc)) doc = doc.replace(/<title>[\s\S]*?<\/title>/i, titleTag);
+    else if (/<\/head>/i.test(doc)) doc = doc.replace(/<\/head>/i, titleTag + "</head>");
+    else doc = titleTag + doc;
+  }
   let frame = document.getElementById("__print_frame");
   if (frame) frame.remove();
   frame = document.createElement("iframe");
