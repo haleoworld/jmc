@@ -1196,6 +1196,60 @@ function criteriaForJob(j) {
   }
   return activeCriteria();
 }
+// Screen a job against EVERY criteria set; returns { [setId]: screeningResult }
+function screenJobAllSets(job) {
+  const out = {};
+  (state.criteria_sets || []).forEach(cs => { out[cs.id] = screenJob(job, cs); });
+  return out;
+}
+// Screen against all sets, then pick `primarySetId` (or the active set) as the headline result.
+function rescreenJob(job, primarySetId) {
+  job.screening_all = screenJobAllSets(job);
+  const cs = criteriaById(primarySetId) || activeCriteria();
+  job.screening = (cs && job.screening_all[cs.id]) || screenJob(job, cs);
+  job.screened_against = cs ? cs.id : (primarySetId || null);
+  return job.screening;
+}
+// Which criteria sets a job currently qualifies for (uses cached screening_all).
+function fitsSets(job) {
+  const all = job.screening_all || {};
+  return (state.criteria_sets || []).filter(cs => all[cs.id] && all[cs.id].qualified);
+}
+// Fit strength for ranking — driven by the match %, with a small target-company
+// bonus and a tiny dealbreaker tiebreaker (favors fewer dealbreakers).
+function fitScore(r) {
+  if (!r) return -Infinity;
+  return (r.score || 0) + (r.target_match?.length ? 5 : 0) - (r.dealbreakers || 0) * 0.01;
+}
+// All sets ranked best-first: qualified sets before non-qualified, each group by fitScore desc.
+function rankedFitSets(job) {
+  const sa = job.screening_all || {};
+  return (state.criteria_sets || [])
+    .map(cs => ({ cs, r: sa[cs.id], score: fitScore(sa[cs.id]) }))
+    .sort((a, b) => {
+      const aq = a.r?.qualified ? 1 : 0, bq = b.r?.qualified ? 1 : 0;
+      if (aq !== bq) return bq - aq;
+      return b.score - a.score;
+    });
+}
+// The single best-fitting set the job QUALIFIES for, or null.
+function bestFitSet(job) {
+  return rankedFitSets(job).find(x => x.r && x.r.qualified) || null;
+}
+// Backfill multi-set screening + match scores for jobs screened before these features
+// existed (in-memory; persists on next save). Recomputes if screening_all is missing or
+// the cached headline result predates the match-% scoring.
+(state.jobs || []).forEach(j => {
+  const hasContent = (j.raw_text && j.raw_text.length > 50) || (j.tech_stack || []).length || (j.requirements || []).length;
+  if (!hasContent) return;
+  if (!j.screening_all || (j.screening && j.screening.score == null)) {
+    j.screening_all = screenJobAllSets(j);
+    const id = j.screened_against;
+    if (!j.screening || j.screening.score == null) {
+      j.screening = (id && j.screening_all[id]) || j.screening_all[(activeCriteria() || {}).id] || j.screening;
+    }
+  }
+});
 let sessionCost = 0;
 
 function loadState() {
@@ -1754,7 +1808,7 @@ function renderTemplatesList() {
   const list = state.templates || [];
   if (!list.length) { root.innerHTML = `<div class="muted small">No templates yet.</div>`; return; }
   root.innerHTML = list.map(t => `
-    <div class="list-item" data-template-id="${escapeHtml(t.id)}">
+    <div class="list-item" data-template-id="${escapeHtml(t.id)}" style="cursor:pointer">
       <div class="grow">
         <div><b>${escapeHtml(t.name)}</b>${t.is_default ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">default</span>` : ""}</div>
         <div class="muted small">${escapeHtml((t.description || "").split("\n")[0].slice(0, 100))}…</div>
@@ -1767,6 +1821,10 @@ function renderTemplatesList() {
       </button>
     </div>
   `).join("");
+  root.querySelectorAll("[data-template-id]").forEach(el => el.addEventListener("click", e => {
+    if (e.target.closest("button")) return;
+    editTemplate(el.dataset.templateId);
+  }));
   root.querySelectorAll(".t_edit").forEach(b => b.addEventListener("click", e => editTemplate(e.currentTarget.dataset.id)));
   root.querySelectorAll(".t_del").forEach(b => b.addEventListener("click", e => {
     const id = e.currentTarget.dataset.id;
@@ -1911,7 +1969,7 @@ function renderCriteriaList() {
   if (!root) return;
   root.innerHTML = (state.criteria_sets || []).map(cs => {
     const isActive = cs.id === state.active_criteria_id;
-    return `<div class="list-item" data-cid="${escapeHtml(cs.id)}">
+    return `<div class="list-item" data-cid="${escapeHtml(cs.id)}" style="cursor:pointer">
       <div class="grow">
         <div><b>${escapeHtml(cs.name)}</b>${isActive ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">active</span>` : ""}</div>
         <div class="muted small">${(cs.target_companies||[]).length} target companies · floor ${cs.comp_floor ? "$"+cs.comp_floor/1000+"k" : "—"}${cs.min_frontend_percent ? " · FE ≥ "+cs.min_frontend_percent+"%" : ""}</div>
@@ -1924,6 +1982,10 @@ function renderCriteriaList() {
       </button>
     </div>`;
   }).join("");
+  root.querySelectorAll("[data-cid]").forEach(el => el.addEventListener("click", e => {
+    if (e.target.closest("button")) return;
+    openCriteriaEditor(el.dataset.cid);
+  }));
   root.querySelectorAll(".c_edit").forEach(b => b.addEventListener("click", e => openCriteriaEditor(e.currentTarget.dataset.id)));
   root.querySelectorAll(".c_del").forEach(b => b.addEventListener("click", e => {
     const id = e.currentTarget.dataset.id;
@@ -2722,8 +2784,7 @@ function buildJobFromIntake({ urlOnly = false } = {}) {
   };
   // Only run screening if there's substantive content
   if ((job.raw_text && job.raw_text.length > 50) || job.tech_stack.length || job.requirements.length) {
-    job.screening = screenJob(job, activeCriteria());
-    job.screened_against = state.active_criteria_id;
+    rescreenJob(job, state.active_criteria_id);
   } else {
     job.screening = { qualified: false, reasons_pass: [], reasons_fail: ["no JD content yet — paste raw JD text and re-screen"], target_match: [] };
   }
@@ -2781,64 +2842,82 @@ function containsAnyNegationAware(text, needles) {
 
 function screenJob(job, c) {
   const reasons_pass = [], reasons_fail = [];
+  // Must-have checks count toward the match %; dealbreakers don't add to the
+  // denominator but each hit lowers the % (weighted) and vetoes qualification.
+  let posTotal = 0, posPass = 0, dbHits = 0;
+  const pass = (msg) => { reasons_pass.push(msg); posTotal++; posPass++; };
+  const fail = (msg) => { reasons_fail.push(msg); posTotal++; };
+  const dbFail = (msg) => { reasons_fail.push(msg); dbHits++; };
+
   const title = job.title || "";
   const company = job.company || "";
   const locationStr = (job.locations || []).join(" ");
   const full = [title, company, locationStr, (job.tech_stack || []).join(" "), (job.requirements || []).join(" "), job.raw_text || ""].join(" ");
 
   let h = containsAny(title, c.title_seniority);
-  if (h.length) reasons_pass.push(`title seniority match: ${h.join(", ")}`);
-  else reasons_fail.push(`title lacks seniority keyword`);
+  if (h.length) pass(`title seniority match: ${h.join(", ")}`);
+  else fail(`title lacks seniority keyword`);
 
   h = containsAny(title, c.title_role);
-  if (h.length) reasons_pass.push(`title role match: ${h.join(", ")}`);
-  else reasons_fail.push(`title lacks frontend/web keyword`);
+  if (h.length) pass(`title role match: ${h.join(", ")}`);
+  else fail(`title lacks frontend/web keyword`);
 
   h = containsAny(locationStr || full, c.location_any);
-  if (h.length) reasons_pass.push(`location match: ${h.join(", ")}`);
-  else reasons_fail.push(`location not in allow-list`);
+  if (h.length) pass(`location match: ${h.join(", ")}`);
+  else fail(`location not in allow-list`);
 
   h = containsAny(full, c.stack_any);
-  if (h.length) reasons_pass.push(`stack match: ${h.join(", ")}`);
-  else reasons_fail.push(`no modern frontend stack mentioned`);
+  if (h.length) pass(`stack match: ${h.join(", ")}`);
+  else fail(`no modern frontend stack mentioned`);
 
   // Comp
   if (c.comp_floor) {
     const max = job.salary_max || job.salary_min;
     if (max) {
       const cadMax = (job.currency || "CAD").toUpperCase() === "USD" ? Math.round(max * 1.35) : max;
-      if (cadMax >= c.comp_floor) reasons_pass.push(`comp ≥ floor (${cadMax.toLocaleString()} CAD ≥ ${c.comp_floor.toLocaleString()})`);
-      else reasons_fail.push(`comp below floor (${cadMax.toLocaleString()} CAD < ${c.comp_floor.toLocaleString()})`);
-    } else if (c.comp_required) reasons_fail.push(`comp not stated and required`);
-    else reasons_pass.push(`comp not stated (allowed)`);
+      if (cadMax >= c.comp_floor) pass(`comp ≥ floor (${cadMax.toLocaleString()} CAD ≥ ${c.comp_floor.toLocaleString()})`);
+      else fail(`comp below floor (${cadMax.toLocaleString()} CAD < ${c.comp_floor.toLocaleString()})`);
+    } else if (c.comp_required) fail(`comp not stated and required`);
+    else pass(`comp not stated (allowed)`);
   }
 
   h = containsAny(title, c.title_blocked);
-  if (h.length) reasons_fail.push(`blocked title: ${h.join(", ")}`);
+  if (h.length) dbFail(`blocked title: ${h.join(", ")}`);
 
   h = containsAnyNegationAware(full, c.oncall_phrases);
-  if (h.length) reasons_fail.push(`on-call/production phrase: ${h.join(", ")}`);
+  if (h.length) dbFail(`on-call/production phrase: ${h.join(", ")}`);
 
   h = containsAny(full, c.kw_excluded);
-  if (h.length) reasons_fail.push(`excluded keyword: ${h.join(", ")}`);
+  if (h.length) dbFail(`excluded keyword: ${h.join(", ")}`);
 
   h = containsAny(company + " " + full, c.co_excluded);
-  if (h.length) reasons_fail.push(`excluded company: ${h.join(", ")}`);
+  if (h.length) dbFail(`excluded company: ${h.join(", ")}`);
 
-  // Frontend / Backend split
+  // Frontend / Backend split (a must-have only when a threshold is set)
   if (c.min_frontend_percent != null && c.min_frontend_percent > 0) {
     if (job.fe_percent == null) {
-      reasons_pass.push(`FE/BE split unknown (could not infer — pass-through)`);
+      pass(`FE/BE split unknown (could not infer — pass-through)`);
     } else if (job.fe_percent >= c.min_frontend_percent) {
-      reasons_pass.push(`frontend split ${job.fe_percent}% ≥ ${c.min_frontend_percent}% threshold`);
+      pass(`frontend split ${job.fe_percent}% ≥ ${c.min_frontend_percent}% threshold`);
     } else {
-      reasons_fail.push(`frontend split ${job.fe_percent}% < ${c.min_frontend_percent}% threshold`);
+      fail(`frontend split ${job.fe_percent}% < ${c.min_frontend_percent}% threshold`);
     }
   }
 
   const target_match = (c.target_companies || []).filter(t => (company + " " + full).toLowerCase().includes(t.toLowerCase()));
 
-  return { qualified: reasons_fail.length === 0, reasons_pass, reasons_fail, target_match };
+  // Match %: must-have coverage, with each dealbreaker hit weighted as 2 failed items.
+  // A fully-qualified job (all must-haves, no dealbreakers) = 100%. A target-company
+  // hit nudges sub-100 scores up slightly so strong-fit roles rank a touch higher.
+  const denom = posTotal + 2 * dbHits;
+  let score = denom ? Math.round((100 * posPass) / denom) : 0;
+  if (target_match.length && score < 100) score = Math.min(100, score + 5);
+
+  return {
+    qualified: dbHits === 0 && posPass === posTotal,
+    reasons_pass, reasons_fail, target_match,
+    score, pos_total: posTotal, pos_pass: posPass, dealbreakers: dbHits
+  };
 }
 
 // ============================================================================
@@ -2871,9 +2950,20 @@ function renderQueue() {
     card.dataset.jobId = j.id;
     const isBatchable = j.status === "queued";
     const target = (j.screening?.target_match || []).length ? `<span class="tag target">${escapeHtml(j.screening.target_match[0])}</span>` : "";
+    const scorePct = j.screening && j.screening.score != null ? ` ${j.screening.score}%` : "";
     const screening = j.screening?.qualified
-      ? `<span class="tag qualified">Qualified</span>`
-      : `<span class="tag rejected">Rejected</span>`;
+      ? `<span class="tag qualified">Qualified${scorePct}</span>`
+      : `<span class="tag rejected">Rejected${scorePct}</span>`;
+    const fits = fitsSets(j);
+    const best = bestFitSet(j);
+    const saQ = j.screening_all || {};
+    const fitsChips = fits.length
+      ? `<div class="tags" style="margin-top:4px"><span class="muted small" style="align-self:center;margin-right:2px">Fits:</span>${fits.map(cs => {
+          const isBest = best && cs.id === best.cs.id && fits.length > 1;
+          const pct = saQ[cs.id] && saQ[cs.id].score != null ? ` ${saQ[cs.id].score}%` : "";
+          return `<span class="tag qualified" title="Qualifies under ${escapeHtml(cs.name)}${isBest ? " — best fit" : ""}">${isBest ? "★ " : ""}${escapeHtml(cs.name)}${pct}</span>`;
+        }).join("")}</div>`
+      : (j.screening_all ? `<div class="tags" style="margin-top:4px"><span class="muted small">Fits no criteria set</span></div>` : "");
     const salary = j.salary_min ? `${(j.salary_min/1000).toFixed(0)}–${j.salary_max ? (j.salary_max/1000).toFixed(0) : "?"}k ${escapeHtml(j.currency || "CAD")}` : "";
     const loc = (j.locations || []).join(", ") || "";
     const arrangement = j.work_arrangement || "";
@@ -2899,6 +2989,7 @@ function renderQueue() {
             ${target}
             <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
           </div>
+          ${fitsChips}
           <div class="actions">
             <button class="q_view" data-id="${j.id}" title="View details" aria-label="View details">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -2946,8 +3037,7 @@ document.getElementById("q_criteria_select").addEventListener("change", e => {
   queued.forEach(j => {
     if (!((j.raw_text && j.raw_text.length > 50) || (j.tech_stack||[]).length || (j.requirements||[]).length)) return;
     const before = !!j.screening?.qualified;
-    j.screening = screenJob(j, cs);
-    j.screened_against = cs.id;
+    rescreenJob(j, cs.id);
     if (!before && j.screening.qualified) q++;
     if (before && !j.screening.qualified) r++;
   });
@@ -2969,8 +3059,7 @@ document.getElementById("q_rescreen_all").addEventListener("click", () => {
   let flippedToQualified = 0, flippedToRejected = 0;
   state.jobs.forEach(j => {
     const before = !!j.screening?.qualified;
-    j.screening = screenJob(j, cs);
-    j.screened_against = cs.id;
+    rescreenJob(j, cs.id);
     const after = j.screening.qualified;
     if (!before && after) flippedToQualified++;
     if (before && !after) flippedToRejected++;
@@ -3078,11 +3167,42 @@ function renderJobDetail(j, editMode) {
   const root = document.getElementById("q_detail");
   const screening = j.screening || { qualified: false, reasons_pass: [], reasons_fail: [], target_match: [] };
   const target = (screening.target_match || []).length ? `<span class="tag target">${escapeHtml(screening.target_match[0])}</span>` : "";
+  const screenPct = screening && screening.score != null ? ` ${screening.score}%` : "";
   const screenTag = screening.qualified
-    ? `<span class="tag qualified">Qualified</span>`
-    : `<span class="tag rejected">Rejected</span>`;
+    ? `<span class="tag qualified">Qualified${screenPct}</span>`
+    : `<span class="tag rejected">Rejected${screenPct}</span>`;
   const salary = j.salary_min ? `${(j.salary_min/1000).toFixed(0)}–${j.salary_max ? (j.salary_max/1000).toFixed(0) : "?"}k ${j.currency || "CAD"}` : "—";
   const fePct = j.fe_percent != null ? `${j.fe_percent}%` : "unknown";
+  // Per-criteria-set qualification summary (which set to assign this job to)
+  const assignedId = j.screened_against || (criteriaForJob(j) || {}).id;
+  const allSets = state.criteria_sets || [];
+  const ranked = rankedFitSets(j);
+  const best = bestFitSet(j);
+  let bestLine = "";
+  if (j.screening_all) {
+    if (best) {
+      const why = (best.r.target_match || []).length
+        ? `${escapeHtml(best.r.target_match[0])} is a target company`
+        : `${best.r.pos_pass}/${best.r.pos_total} must-haves met, no dealbreakers`;
+      bestLine = `<div class="small" style="margin-bottom:8px"><b style="color:var(--good)">★ Best fit: ${escapeHtml(best.cs.name)} (${best.r.score}%)</b> <span class="muted">— ${why}</span></div>`;
+    } else {
+      const closest = ranked[0];
+      bestLine = closest ? `<div class="small" style="margin-bottom:8px"><b style="color:var(--bad)">No set fully qualifies.</b> <span class="muted">Closest: ${escapeHtml(closest.cs.name)} (${closest.r ? closest.r.score + "%, " + closest.r.dealbreakers + " dealbreaker(s)" : "?"})</span></div>` : "";
+    }
+  }
+  const fitSummaryHTML = allSets.length ? `
+    <div class="small muted" style="margin-bottom:6px">Match by criteria set${j.screening_all ? "" : " (re-screen to populate)"}:</div>
+    ${bestLine}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+      ${ranked.map(({ cs, r }) => {
+        const ok = r && r.qualified;
+        const isBest = best && cs.id === best.cs.id;
+        const isAssigned = cs.id === assignedId;
+        const pct = r && r.score != null ? ` ${r.score}%` : "";
+        return `<span class="tag ${ok ? 'qualified' : 'rejected'}" title="${ok ? 'Qualifies' : 'Does not qualify'} under ${escapeHtml(cs.name)}${r ? ' — ' + r.pos_pass + '/' + r.pos_total + ' must-haves, ' + r.dealbreakers + ' dealbreaker(s)' : ''}">${isBest ? '★ ' : ''}${ok ? '✓' : '✗'} ${escapeHtml(cs.name)}${pct}${isAssigned ? ' ●' : ''}</span>`;
+      }).join("")}
+    </div>
+    <div class="small muted" style="margin-bottom:12px">Match % = share of must-have criteria met (dealbreakers lower it & veto qualification). ★ best fit · ● current set</div>` : "";
 
   if (editMode) {
     // ----- EDIT MODE -----
@@ -3170,7 +3290,7 @@ function renderJobDetail(j, editMode) {
       j.interview_process = document.getElementById("e_iv").value.trim();
       j.notes = document.getElementById("e_notes").value;
       j.raw_text = document.getElementById("e_raw").value;
-      { const cs = criteriaForJob(j); j.screening = screenJob(j, cs); j.screened_against = cs.id; }
+      rescreenJob(j, criteriaForJob(j).id);
       saveState();
       showToast(`Saved. ${j.screening.qualified ? "Qualified" : "Rejected"}.`);
       renderJobDetail(j, false);
@@ -3290,6 +3410,7 @@ Return JSON only.`;
 
     <div class="card">
       <h3>Screening result</h3>
+      ${fitSummaryHTML}
       ${(screening.reasons_pass || []).length ? `<div style="margin-bottom:6px"><b style="color:var(--good)">Pass:</b><ul style="margin:4px 0;padding-left:20px">${screening.reasons_pass.map(r => `<li style="margin:2px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
       ${(screening.reasons_fail || []).length ? `<div><b style="color:var(--bad)">Fail:</b><ul style="margin:4px 0;padding-left:20px">${screening.reasons_fail.map(r => `<li style="margin:2px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
       ${(screening.reasons_pass || []).length === 0 && (screening.reasons_fail || []).length === 0 ? `<div class="muted small">No screening run yet. Click Re-screen.</div>` : ""}
@@ -3314,8 +3435,7 @@ Return JSON only.`;
   document.getElementById("d_rescreen").addEventListener("click", () => {
     const before = !!j.screening?.qualified;
     const cs = criteriaForJob(j);
-    j.screening = screenJob(j, cs);
-    j.screened_against = cs.id;
+    rescreenJob(j, cs.id);
     saveState();
     const after = j.screening.qualified;
     showToast(after === before ? `Re-screened (${cs.name}): ${after ? "Qualified" : "Rejected"}` : (after ? "✓ Now qualified!" : "✗ Now rejected"));
@@ -3383,6 +3503,7 @@ function renderBatches() {
       <div class="grow">
         <div>${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></div>
         <div class="muted small">${jobs.length} job(s) · ${submitted} submitted · ${screens} phone screen(s) · Resume: ${escapeHtml(b.resume_version_id || "not set")}</div>
+        <div class="muted small">Criteria: ${escapeHtml((criteriaById(b.criteria_id) || {}).name || "not set")}</div>
       </div>
       <div class="row batch-actions" style="gap:4px;margin-top:10px;margin-left:-8px;flex-wrap:wrap" onclick="event.stopPropagation()">
         <button class="icon-btn b_act_view" data-id="${b.id}" title="View" aria-label="View">
@@ -3534,8 +3655,7 @@ function showBatchDetail(batchId) {
       b.job_ids.forEach(jid => {
         const j = state.jobs.find(x => x.id === jid);
         if (!j) return;
-        j.screening = screenJob(j, cs);
-        j.screened_against = cs.id;
+        rescreenJob(j, cs.id);
       });
       showToast(`Batch re-screened against ${cs.name}`);
     }
@@ -3988,6 +4108,11 @@ function renderResumes() {
   state.resumes.versions.slice().reverse().forEach(v => {
     const item = document.createElement("div");
     item.className = "list-item";
+    item.style.cursor = "pointer";
+    item.addEventListener("click", e => {
+      if (e.target.closest("button")) return;
+      editResume(v.id);
+    });
     item.innerHTML = `
       <div class="grow">
         <div>${escapeHtml(v.id)} <span class="muted small">${escapeHtml(v.created_at)}</span></div>
