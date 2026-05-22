@@ -344,7 +344,7 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 /* Floating Action Button — fixed bottom-right, above the bottom nav */
 .fab {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 74px);
+  bottom: calc(env(safe-area-inset-bottom) + 128px); /* clear bottom nav + comment bar */
   right: calc(env(safe-area-inset-right) + 16px);
   z-index: 25;
   width: 54px; height: 54px;
@@ -362,6 +362,66 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 @media (min-width: 760px) {
   .fab { right: max(calc(env(safe-area-inset-right) + 16px), calc(50vw - 360px + 16px)); }
 }
+
+/* ---- Comment bar (pinned above bottom nav) + slide-up drawer ---- */
+#comment_bar {
+  flex-shrink: 0;
+  padding: 7px 12px 8px;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+#comment_bar_btn {
+  width: 100%; display: flex; align-items: center; gap: 9px;
+  background: var(--soft); border: 1px solid var(--line); color: var(--muted);
+  border-radius: 999px; padding: 9px 14px; cursor: pointer;
+  font-size: 14px; text-align: left;
+  transition: background-color .12s, border-color .12s;
+}
+@media (hover: hover) { #comment_bar_btn:hover { background: var(--hover); } }
+#comment_bar_btn svg { width: 18px; height: 18px; flex: none; }
+#comment_bar_btn .cb-pill-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-badge {
+  flex: none; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-fg);
+  font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+}
+.cdrawer { position: fixed; inset: 0; z-index: 150; display: flex; flex-direction: column; justify-content: flex-end; }
+.cdrawer-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.4); }
+.cdrawer-sheet {
+  position: relative; z-index: 1;
+  background: var(--card); border-top-left-radius: 18px; border-top-right-radius: 18px;
+  display: flex; flex-direction: column; height: 82vh; max-height: 82vh;
+  box-shadow: 0 -8px 30px rgba(0,0,0,.25);
+  animation: cdrawer-up .22s ease;
+}
+@keyframes cdrawer-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.cdrawer-head { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 14px 12px 10px; border-bottom: 1px solid var(--line); }
+.cdrawer-title { font-weight: 800; font-size: 16px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cdrawer-head-actions { display: flex; align-items: center; gap: 4px; }
+.cd-filter { display: inline-flex; background: var(--soft); border-radius: 999px; padding: 2px; }
+.cd-filter button { border: 0; background: transparent; color: var(--muted); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.cd-filter button.active { background: var(--card); color: var(--fg); }
+.cdrawer-list { flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 14px; }
+.cdrawer-input {
+  flex-shrink: 0; display: flex; gap: 8px; align-items: flex-end;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line); background: var(--card);
+}
+.cdrawer-input textarea {
+  flex: 1; resize: none; max-height: 140px; min-height: 42px;
+  border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px;
+  font: inherit; font-size: 14px; background: var(--bg); color: var(--fg); line-height: 1.4;
+}
+.cdrawer-input .btn { flex: none; align-self: stretch; }
+.cd-item { display: flex; gap: 10px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.cd-item:last-child { border-bottom: 0; }
+.cd-check { flex: none; margin-top: 1px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+.cd-body { flex: 1; min-width: 0; }
+.cd-text { font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.cd-item.done .cd-text { text-decoration: line-through; color: var(--muted); }
+.cd-meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.cd-del { flex: none; }
+.cd-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 34px 12px; }
 
 /* Compact variant of queue-card used in batch detail */
 .batch-job-card { padding: 12px; border-radius: 12px; }
@@ -1082,6 +1142,14 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 
 </main>
 
+<div id="comment_bar">
+  <button id="comment_bar_btn" type="button" aria-label="Open comments for this page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+    <span class="cb-pill-text">Add a comment, request or improvement…</span>
+    <span id="comment_badge" class="cb-badge" style="display:none">0</span>
+  </button>
+</div>
+
 <nav class="tabs" id="tabs">
   <button data-tab="queue" aria-label="Queue" title="Queue">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm0 5.25h.007v.008H3.75V12zm0 5.25h.007v.008H3.75v-.008z"/></svg>
@@ -1099,6 +1167,30 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.213-1.28z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
   </button>
 </nav>
+
+<div id="comment_drawer" class="cdrawer" style="display:none">
+  <div class="cdrawer-backdrop" id="comment_drawer_backdrop"></div>
+  <div class="cdrawer-sheet">
+    <div class="cdrawer-head">
+      <div class="cdrawer-title">Comments · <span id="cd_page_label">Queue</span></div>
+      <div class="cdrawer-head-actions">
+        <div class="cd-filter">
+          <button type="button" data-cd-filter="open" class="active">Open</button>
+          <button type="button" data-cd-filter="all">All</button>
+        </div>
+        <button type="button" class="icon-btn" id="cd_copy" title="Copy all comments as a markdown checklist" aria-label="Copy all as markdown">⧉</button>
+        <button type="button" class="icon-btn" id="cd_close" title="Close" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="cdrawer-list" id="cd_list"></div>
+    <form class="cdrawer-input" id="cd_form">
+      <textarea id="cd_text" rows="1" placeholder="Add a comment, request or improvement…"></textarea>
+      <button type="submit" class="btn" id="cd_post">Post</button>
+    </form>
+  </div>
+</div>
 </div>
 
 <script>
@@ -1325,6 +1417,9 @@ function loadState() {
           ];
         }
       }
+      // Per-page comment threads (feedback / requests / improvements)
+      if (!s.comments || typeof s.comments !== "object") s.comments = {};
+      ["queue", "batches", "resumes", "dashboard", "settings"].forEach(p => { if (!Array.isArray(s.comments[p])) s.comments[p] = []; });
       return s;
     }
   } catch (e) { console.warn("Failed to load state", e); }
@@ -1379,6 +1474,7 @@ function defaultState() {
         "Are you legally authorized to work in Canada?"
       ]
     },
+    comments: { queue: [], batches: [], resumes: [], dashboard: [], settings: [] },
     nextJobId: 1,
     nextBatchId: 1,
     nextResumeId: 2
@@ -1717,6 +1813,7 @@ function showTab(name) {
   if (name === "resumes") renderResumes();
   if (name === "dashboard") renderDashboard();
   if (name === "settings") { renderSetup(); renderSettings(); }
+  if (typeof updateCommentBadge === "function") updateCommentBadge();
 }
 
 const SETTINGS_SECTIONS = [
@@ -1941,6 +2038,143 @@ function renderUsageSummary() {
 }
 
 document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+// ============================================================================
+// COMMENT BAR + DRAWER — per-page feedback / requests / improvements
+// ============================================================================
+const COMMENT_PAGES = ["queue", "batches", "resumes", "dashboard", "settings"];
+const PAGE_LABELS = { queue: "Queue", batches: "Batches", resumes: "Resumes", dashboard: "Dashboard", settings: "Settings" };
+let commentFilter = "open";
+
+function currentPage() { return document.querySelector("nav.tabs button.active")?.dataset.tab || "queue"; }
+function commentThread(page) {
+  if (!state.comments) state.comments = {};
+  if (!Array.isArray(state.comments[page])) state.comments[page] = [];
+  return state.comments[page];
+}
+function openCommentCount(page) { return commentThread(page).filter(c => !c.done).length; }
+function fmtCommentTime(iso) {
+  try { return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
+  catch { return (iso || "").slice(0, 16).replace("T", " "); }
+}
+function updateCommentBadge() {
+  const badge = document.getElementById("comment_badge");
+  if (!badge) return;
+  const n = openCommentCount(currentPage());
+  if (n > 0) { badge.textContent = n > 99 ? "99+" : String(n); badge.style.display = "inline-flex"; }
+  else badge.style.display = "none";
+}
+function renderCommentList() {
+  const page = currentPage();
+  const label = document.getElementById("cd_page_label");
+  if (label) label.textContent = PAGE_LABELS[page] || page;
+  const list = document.getElementById("cd_list");
+  if (!list) return;
+  let items = commentThread(page).slice();
+  if (commentFilter === "open") items = items.filter(c => !c.done);
+  if (!items.length) {
+    list.innerHTML = `<div class="cd-empty">${commentFilter === "open" ? "No open comments for this page." : "No comments yet for this page."}</div>`;
+    return;
+  }
+  list.innerHTML = items.map(c => `
+    <div class="cd-item ${c.done ? "done" : ""}" data-id="${escapeHtml(c.id)}">
+      <input type="checkbox" class="cd-check" ${c.done ? "checked" : ""} aria-label="Mark done">
+      <div class="cd-body">
+        <div class="cd-text">${escapeHtml(c.text)}</div>
+        <div class="cd-meta">${escapeHtml(fmtCommentTime(c.created_at))}${c.done && c.done_at ? " · done " + escapeHtml(fmtCommentTime(c.done_at)) : ""}</div>
+      </div>
+      <button class="icon-btn danger cd-del" title="Delete" aria-label="Delete">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+      </button>
+    </div>`).join("");
+  list.querySelectorAll(".cd-check").forEach(ch => ch.addEventListener("change", e => toggleCommentDone(e.target.closest(".cd-item").dataset.id)));
+  list.querySelectorAll(".cd-del").forEach(b => b.addEventListener("click", e => deleteComment(e.currentTarget.closest(".cd-item").dataset.id)));
+}
+function openCommentDrawer() {
+  renderCommentList();
+  document.getElementById("comment_drawer").style.display = "flex";
+  const list = document.getElementById("cd_list");
+  if (list) list.scrollTop = list.scrollHeight;
+}
+function closeCommentDrawer() { document.getElementById("comment_drawer").style.display = "none"; }
+function postComment(text) {
+  const t = (text || "").trim();
+  if (!t) return;
+  commentThread(currentPage()).push({
+    id: "cmt_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    text: t, done: false, created_at: nowISO(), done_at: null
+  });
+  saveState();
+  renderCommentList();
+  updateCommentBadge();
+  const list = document.getElementById("cd_list");
+  if (list) list.scrollTop = list.scrollHeight;
+}
+function toggleCommentDone(id) {
+  const c = commentThread(currentPage()).find(x => x.id === id);
+  if (!c) return;
+  c.done = !c.done;
+  c.done_at = c.done ? nowISO() : null;
+  saveState();
+  renderCommentList();
+  updateCommentBadge();
+}
+function deleteComment(id) {
+  const thread = commentThread(currentPage());
+  const idx = thread.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  if (!confirm("Delete this comment?")) return;
+  thread.splice(idx, 1);
+  saveState();
+  renderCommentList();
+  updateCommentBadge();
+}
+function copyAllComments() {
+  let md = `# Comment backlog — ${new Date().toISOString().slice(0, 10)}\n`;
+  let total = 0;
+  COMMENT_PAGES.forEach(p => {
+    const items = commentThread(p);
+    if (!items.length) return;
+    md += `\n## ${PAGE_LABELS[p]}\n`;
+    items.forEach(c => {
+      total++;
+      const box = c.done ? "x" : " ";
+      const done = c.done && c.done_at ? ` _(done ${c.done_at.slice(0, 10)})_` : "";
+      md += `- [${box}] ${c.text.replace(/\s*\n\s*/g, " ")}${done}\n`;
+    });
+  });
+  if (!total) { showToast("No comments to copy yet."); return; }
+  const finish = ok => showToast(ok ? "Copied backlog as markdown checklist" : "Copy failed — select the text manually");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(md).then(() => finish(true), () => fallbackCopy(md, finish));
+  } else { fallbackCopy(md, finish); }
+}
+function fallbackCopy(text, cb) {
+  const ta = document.createElement("textarea");
+  ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  let ok = false; try { ok = document.execCommand("copy"); } catch (_) {}
+  document.body.removeChild(ta); cb(ok);
+}
+document.getElementById("comment_bar_btn").addEventListener("click", openCommentDrawer);
+document.getElementById("cd_close").addEventListener("click", closeCommentDrawer);
+document.getElementById("comment_drawer_backdrop").addEventListener("click", closeCommentDrawer);
+document.getElementById("cd_copy").addEventListener("click", copyAllComments);
+document.querySelectorAll("[data-cd-filter]").forEach(b => b.addEventListener("click", () => {
+  commentFilter = b.dataset.cdFilter;
+  document.querySelectorAll("[data-cd-filter]").forEach(x => x.classList.toggle("active", x === b));
+  renderCommentList();
+}));
+(() => {
+  const cdText = document.getElementById("cd_text");
+  cdText.addEventListener("input", () => { cdText.style.height = "auto"; cdText.style.height = Math.min(cdText.scrollHeight, 140) + "px"; });
+  document.getElementById("cd_form").addEventListener("submit", e => {
+    e.preventDefault();
+    postComment(cdText.value);
+    cdText.value = ""; cdText.style.height = "auto";
+  });
+})();
+updateCommentBadge();
 
 // ============================================================================
 // SETUP view
