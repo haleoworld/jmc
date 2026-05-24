@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<!-- App / site icon: work-badge (blue #0052FF bg, white lines). SVG favicon for browser tabs; PNG apple-touch-icon for the iPhone home-screen button. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjExMiIgZmlsbD0iIzAwNTJGRiIvPjxnIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIxNTAiIHk9IjEyMCIgd2lkdGg9IjIxMiIgaGVpZ2h0PSIyODQiIHJ4PSIzNCIvPjxsaW5lIHgxPSIyMjYiIHkxPSIxNjIiIHgyPSIyODYiIHkyPSIxNjIiLz48Y2lyY2xlIGN4PSIyNTYiIGN5PSIyMzgiIHI9IjM0Ii8+PHBhdGggZD0iTTIwOCAzMzJjMC0yNi41IDIxLjUtNDggNDgtNDhzNDggMjEuNSA0OCA0OHY1YTExIDExIDAgMCAxLTExIDExaC03NGExMSAxMSAwIDAgMS0xMS0xMXoiLz48L2c+PC9zdmc+Cg==">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<meta name="apple-mobile-web-app-title" content="Phone Screen">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>Phone Screen Conversion Tool</title>
@@ -203,6 +207,7 @@ button.icon-btn.primary:hover { background: var(--accent-strong); color: var(--a
 button.icon-btn.primary svg { width: 20px; height: 20px; }
 button.icon-btn.danger { color: var(--bad); }
 button.icon-btn.danger:hover { background: var(--bad-bg); color: var(--bad); }
+button.icon-btn.active { color: var(--accent); background: var(--accent-soft); }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 main { padding: 0; width: 100%; }
 section.view { display: none; max-width: 720px; margin: 0 auto; padding: 16px; }
@@ -533,6 +538,12 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   display: inline-flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 800; font-size: 15px; letter-spacing: -.02em;
 }
+/* Standalone avatar (company list/detail and other non-card contexts) */
+.avatar {
+  width: 40px; height: 40px; border-radius: 999px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 800; font-size: 14px; letter-spacing: -.02em;
+}
 .queue-card .main { flex: 1; min-width: 0; }
 .queue-card .title-line { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .queue-card .title-line .title { color: var(--fg); font-weight: 700; font-size: 15px; text-decoration: none; line-height: 1.3; }
@@ -765,20 +776,19 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 <section class="view" data-view="queue">
   <div id="q_list_view">
     <button class="btn ghost" id="q_to_batches_btn" style="margin-bottom:10px">← Batches</button>
-    <h2 style="margin:0 0 4px">Unbatched</h2>
-    <p class="muted small" style="margin:0 0 14px">Jobs you've added but not yet grouped into a batch. Screen them, then select and create a batch.</p>
-    <button class="fab" id="q_add_btn" aria-label="Add job" title="Add job">
+    <div class="flex-between" style="margin:0 0 4px;gap:10px;align-items:flex-start">
+      <h2 style="margin:0">Unbatched</h2>
+      <label style="margin:0;display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:14px;color:var(--muted);white-space:nowrap"><input type="checkbox" id="q_show_rejected" style="accent-color:var(--accent)"> Show rejected</label>
+    </div>
+    <p class="muted small" style="margin:0 0 14px">Jobs you've added but not yet grouped into a batch. Screen them, then select and add to a batch with the <b>+</b> button.</p>
+    <button class="fab" id="q_add_btn" aria-label="Add" title="Add">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
 
-    <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <label style="margin:0;display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:14px;color:var(--muted)"><input type="checkbox" id="q_show_rejected" style="accent-color:var(--accent)"> Show rejected</label>
-    </div>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <button class="btn ghost" id="q_select_all">Select all</button>
       <span class="muted small" id="q_selected_count">0 selected</span>
       <button class="btn ghost" id="q_rescreen_all" style="margin-left:auto">Re-screen all</button>
-      <button class="btn ghost" id="q_add_to_batch">Add to batch…</button>
     </div>
 
     <div id="q_list"></div>
@@ -892,6 +902,8 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
       <button class="subtab-head" data-subtab="criteria">Criteria</button>
       <button class="subtab-head" data-subtab="resume">Resume</button>
       <button class="subtab-head" data-subtab="templates">Templates</button>
+      <button class="subtab-head" data-subtab="companies">Companies</button>
+      <button class="subtab-head" data-subtab="interviews">Interviews</button>
     </div>
     <div class="subtab-panels">
 
@@ -942,6 +954,12 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 
     <!-- Templates sub-tab — populated at init by relocating the template cards here -->
     <div class="subtab-panel" data-subtab="templates" id="rt_panel_templates"></div>
+
+    <!-- Companies sub-tab — employers shared across jobs; notes + AI summary feed AI screening -->
+    <div class="subtab-panel" data-subtab="companies" id="rt_panel_companies"></div>
+
+    <!-- Interviews sub-tab — configurable preset interview stages that seed each job's Interview tab -->
+    <div class="subtab-panel" data-subtab="interviews" id="rt_panel_interviews"></div>
 
     </div><!-- /.subtab-panels -->
   </div><!-- /.subtabs -->
@@ -998,11 +1016,13 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     </div>
   </div>
 
+  <button class="fab" data-settings-section="criteria" id="crit_new_btn" aria-label="New criteria set" title="New criteria set">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
   <div class="card" data-settings-section="criteria" id="crit_list_card">
     <h3>Screening criteria sets</h3>
     <p class="small muted" style="margin:0 0 12px">Define multiple variants of "what counts as a good role" and test them in parallel — e.g. old-fashioned enterprise vs. established tech vs. startups. Pick the active one on the Unbatched page (Batches → Unbatched); each batch records which variant it used.</p>
     <div id="crit_list"></div>
-    <button class="btn ghost" id="crit_new_btn" style="margin-top:10px">+ New criteria set</button>
   </div>
 
   <div data-settings-section="criteria" id="crit_edit_wrap" style="display:none">
@@ -1073,11 +1093,13 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <div class="row" style="margin-bottom:20px"><button class="btn" id="crit_done_btn">Done</button></div>
   </div>
 
+  <button class="fab" data-settings-section="templates" id="s_template_new_btn" aria-label="New template" title="New template">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
   <div class="card" data-settings-section="templates">
     <h3>Resume templates</h3>
     <p class="small muted" style="margin:0 0 12px">Define output formats for your resume. Each template is a plain-English description of the layout and styling — Claude reads it during <b>Generate</b> on a resume version to produce a styled HTML/PDF/Word file.</p>
     <div id="s_templates_list"></div>
-    <button class="btn ghost" id="s_template_new_btn" style="margin-top:10px">+ New template</button>
   </div>
 
   <div class="card" data-settings-section="templates" id="s_template_edit_card" style="display:none">
@@ -1269,7 +1291,13 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
           <button type="button" data-cd-filter="open" class="active">Open</button>
           <button type="button" data-cd-filter="all">All</button>
         </div>
-        <button type="button" class="icon-btn" id="cd_copy" title="Copy all comments as a markdown checklist" aria-label="Copy all as markdown">⧉</button>
+        <button type="button" class="icon-btn" id="cd_mark_all" title="Mark all comments on this page as completed" aria-label="Mark all completed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="cd_copy_pending" title="Copy only pending (not-done) comments" aria-label="Copy pending comments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="cd_copy" title="Copy all comments (incl. done) as a markdown checklist" aria-label="Copy all as markdown">⧉</button>
         <button type="button" class="icon-btn" id="cd_close" title="Close" aria-label="Close">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -1366,6 +1394,13 @@ function makeCriteriaSets() {
 
 const LS_KEY = "phone_screen_app_v1";
 let state = loadState();
+// One-time backfill: auto-create/link companies for jobs saved before the companies feature.
+(function backfillCompanies() {
+  if (!Array.isArray(state.jobs)) return;
+  let changed = false;
+  state.jobs.forEach(j => { if (j.company && !j.company_id) { linkJobToCompany(j); changed = true; } });
+  if (changed) { try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch (e) {} }
+})();
 // Returns the criteria set currently active for queue screening
 // A criteria set is "enabled" unless explicitly disabled (enabled === false). Disabled sets are
 // skipped in screening / fit display and hidden from the active-set pickers, but config is kept.
@@ -1517,6 +1552,12 @@ function loadState() {
       // Per-page comment threads (feedback / requests / improvements)
       if (!s.comments || typeof s.comments !== "object") s.comments = {};
       ["queue", "batches", "resumes", "dashboard", "settings"].forEach(p => { if (!Array.isArray(s.comments[p])) s.comments[p] = []; });
+      // Companies (employer entities shared across jobs)
+      if (!Array.isArray(s.companies)) s.companies = [];
+      if (typeof s.nextCompanyId !== "number") s.nextCompanyId = (s.companies.length || 0) + 1;
+      s.companies.forEach(c => { if (!Array.isArray(c.notes)) c.notes = []; if (typeof c.norm !== "string") c.norm = normalizeCompanyName(c.name); });
+      // Configurable interview preset stages (seed new jobs' Interview tab)
+      if (!Array.isArray(s.interview_presets) || !s.interview_presets.length) s.interview_presets = ["Phone screen", "Hiring manager", "Coding", "Final"];
       return s;
     }
   } catch (e) { console.warn("Failed to load state", e); }
@@ -1572,9 +1613,12 @@ function defaultState() {
       ]
     },
     comments: { queue: [], batches: [], resumes: [], dashboard: [], settings: [] },
+    companies: [],
+    interview_presets: ["Phone screen", "Hiring manager", "Coding", "Final"],
     nextJobId: 1,
     nextBatchId: 1,
-    nextResumeId: 2
+    nextResumeId: 2,
+    nextCompanyId: 1
   };
 }
 
@@ -1783,6 +1827,108 @@ function avatarInitials(s) {
   return (s || "?").split(/\s+/).map(w => w[0]).filter(Boolean).slice(0,2).join("").toUpperCase() || "?";
 }
 
+// ============================================================================
+// COMPANIES — entity shared across jobs at the same employer (notes + AI summary)
+// ============================================================================
+// Normalize a company name for matching: lowercase, strip punctuation + common
+// legal suffixes, collapse whitespace. "EvenUp, Inc." and "evenup" both → "evenup".
+function normalizeCompanyName(name) {
+  if (!name) return "";
+  let s = String(name).toLowerCase().trim();
+  s = s.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, " ");
+  s = s.replace(/\b(inc|incorporated|llc|l l c|ltd|limited|corp|corporation|co|company|gmbh|plc|sa|ag|nv|bv|llp|lp|pllc|pte|holdings|group|technologies|technology|labs|software|solutions|systems|services)\b/g, " ");
+  return s.replace(/\s+/g, " ").trim();
+}
+function findCompanyByName(name) {
+  const norm = normalizeCompanyName(name);
+  if (!norm) return null;
+  return (state.companies || []).find(c => c.norm === norm) || null;
+}
+function companyById(id) {
+  if (!id) return null;
+  return (state.companies || []).find(c => c.id === id) || null;
+}
+// Find an existing company by normalized name, else create one. Returns the company (or null for empty name).
+function findOrCreateCompany(name) {
+  const display = (name || "").trim();
+  if (!display) return null;
+  if (!Array.isArray(state.companies)) state.companies = [];
+  let c = findCompanyByName(display);
+  if (c) return c;
+  c = {
+    id: "co_" + String(state.nextCompanyId++ || 1).padStart(3, "0"),
+    name: display,
+    norm: normalizeCompanyName(display),
+    notes: [],          // [{id, at, text, source, job_id, stage_id}]
+    ai_summary: "",
+    ai_summary_at: "",
+    created_at: nowISO(),
+    updated_at: nowISO()
+  };
+  state.companies.push(c);
+  return c;
+}
+// Resolve the company a job belongs to (by id, falling back to name match).
+function companyForJob(job) {
+  if (!job) return null;
+  if (job.company_id) { const c = companyById(job.company_id); if (c) return c; }
+  return findCompanyByName(job.company);
+}
+// Auto-link a job to a company derived from its company field (auto-create if needed).
+// Called whenever a job's company field is set/changed. Returns the company (or null).
+function linkJobToCompany(job) {
+  if (!job) return null;
+  const c = findOrCreateCompany(job.company);
+  job.company_id = c ? c.id : null;
+  return c;
+}
+// All jobs currently mapped to a company.
+function jobsForCompany(company) {
+  if (!company) return [];
+  return (state.jobs || []).filter(j => (j.company_id && j.company_id === company.id) || (!j.company_id && normalizeCompanyName(j.company) === company.norm));
+}
+// Append a free-form note to a company's history.
+function addCompanyNote(company, text, source) {
+  if (!company || !(text || "").trim()) return null;
+  if (!Array.isArray(company.notes)) company.notes = [];
+  const note = { id: "n_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), at: nowISO(), text: text.trim(), source: source || "manual" };
+  company.notes.push(note);
+  company.updated_at = nowISO();
+  return note;
+}
+// Upsert a note keyed by (job_id, stage_id) — used to roll interview review notes up to
+// the company without duplicating on every edit. Empty text removes the existing note.
+function upsertCompanyNote(company, jobId, stageId, text, label) {
+  if (!company) return;
+  if (!Array.isArray(company.notes)) company.notes = [];
+  const trimmed = (text || "").trim();
+  const idx = company.notes.findIndex(n => n.source === "interview" && n.job_id === jobId && n.stage_id === stageId);
+  if (!trimmed) { if (idx >= 0) { company.notes.splice(idx, 1); company.updated_at = nowISO(); } return; }
+  const body = (label ? label + ": " : "") + trimmed;
+  if (idx >= 0) { company.notes[idx].text = body; company.notes[idx].at = nowISO(); }
+  else company.notes.push({ id: "iv_" + jobId + "_" + stageId, at: nowISO(), text: body, source: "interview", job_id: jobId, stage_id: stageId });
+  company.updated_at = nowISO();
+}
+
+// Compact candidate biography context for AI prompts; "" when no bios are set.
+function candidateBioBlock(maxEach = 1200) {
+  const p = state.profile || {};
+  const bits = [];
+  if ((p.life_bio_text || "").trim()) bits.push("Life biography: " + p.life_bio_text.trim().slice(0, maxEach));
+  if ((p.prof_bio_text || "").trim()) bits.push("Professional biography: " + p.prof_bio_text.trim().slice(0, maxEach));
+  return bits.join("\n");
+}
+// Compact company context (AI summary + recent notes) for AI prompts; "" when nothing useful.
+function companyContextBlock(job, maxNotes = 6) {
+  const c = companyForJob(job);
+  if (!c) return "";
+  const out = [];
+  if ((c.ai_summary || "").trim()) out.push("Summary: " + c.ai_summary.trim().slice(0, 1200));
+  const notes = (c.notes || []).slice(-maxNotes);
+  if (notes.length) out.push("Notes:\n" + notes.map(n => "- " + n.text).join("\n").slice(0, 2000));
+  return out.length ? `Company "${c.name}":\n` + out.join("\n") : "";
+}
+
 function showToast(message, ms = 2500) {
   const el = document.getElementById("toast");
   if (!el) return;
@@ -1927,7 +2073,7 @@ function applyTab(name) {
 // Hash router — GitHub Pages is static, so routing is client-side via location.hash.
 // Routes: #/batches  #/queue  #/resumes  #/dashboard  #/settings  #/batch/<id>  #/job/<id>
 // ============================================================================
-function viewHash(name) { return "#/" + name; }
+function viewHash(name) { return "#/" + (name === "resumes" ? "setup" : name); }
 // Set the hash; returns true if it actually changed (which will fire hashchange → route()).
 function setHash(h) { if (location.hash === h) return false; location.hash = h; return true; }
 // Navigate to a hash route. If the hash didn't change (already there), re-apply by routing directly.
@@ -1946,7 +2092,8 @@ function route() {
       break;
     case "add":       applyTab("queue"); showIntakeView(); return;   // job-intake form (lives in the queue section)
     case "queue":     applyTab("queue"); return;
-    case "resumes":   applyTab("resumes"); if (parts[1]) setSubtab("resumes", parts[1]); return;
+    case "setup":     // Setup page (criteria / resume / templates / companies)
+    case "resumes":   applyTab("resumes"); if (parts[1]) setSubtab("resumes", parts[1]); return;   // "resumes" kept as a back-compat alias
     case "dashboard": applyTab("dashboard"); return;
     case "settings":  applyTab("settings"); return;
     case "batches":   applyTab("batches"); return;
@@ -2316,11 +2463,17 @@ function renderCommentList() {
         <div class="cd-text">${escapeHtml(c.text)}</div>
         <div class="cd-meta">${escapeHtml(fmtCommentTime(c.created_at))}${c.done && c.done_at ? " · done " + escapeHtml(fmtCommentTime(c.done_at)) : ""}</div>
       </div>
-      <button class="icon-btn danger cd-del" title="Delete" aria-label="Delete">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-      </button>
+      <div style="display:flex;gap:2px;flex:0 0 auto">
+        <button class="icon-btn cd-edit" title="Edit" aria-label="Edit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+        </button>
+        <button class="icon-btn danger cd-del" title="Delete" aria-label="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+        </button>
+      </div>
     </div>`).join("");
   list.querySelectorAll(".cd-check").forEach(ch => ch.addEventListener("change", e => toggleCommentDone(e.target.closest(".cd-item").dataset.id)));
+  list.querySelectorAll(".cd-edit").forEach(b => b.addEventListener("click", e => editComment(e.currentTarget.closest(".cd-item").dataset.id)));
   list.querySelectorAll(".cd-del").forEach(b => b.addEventListener("click", e => deleteComment(e.currentTarget.closest(".cd-item").dataset.id)));
 }
 function openCommentDrawer() {
@@ -2352,6 +2505,27 @@ function toggleCommentDone(id) {
   renderCommentList();
   updateCommentBadge();
 }
+function markAllCommentsDone() {
+  const thread = commentThread(currentPage());
+  const open = thread.filter(c => !c.done);
+  if (!open.length) { showToast("No open comments on this page."); return; }
+  if (!confirm(`Mark all ${open.length} open comment(s) on this page as completed?`)) return;
+  open.forEach(c => { c.done = true; c.done_at = nowISO(); });
+  saveState();
+  renderCommentList();
+  updateCommentBadge();
+  showToast(`Marked ${open.length} comment(s) completed`);
+}
+function editComment(id) {
+  const c = commentThread(currentPage()).find(x => x.id === id);
+  if (!c) return;
+  const nv = prompt("Edit comment:", c.text);
+  if (nv === null) return;
+  if (!nv.trim()) { deleteComment(id); return; }
+  c.text = nv.trim();
+  saveState();
+  renderCommentList();
+}
 function deleteComment(id) {
   const thread = commentThread(currentPage());
   const idx = thread.findIndex(x => x.id === id);
@@ -2362,11 +2536,11 @@ function deleteComment(id) {
   renderCommentList();
   updateCommentBadge();
 }
-function copyAllComments() {
-  let md = `# Comment backlog — ${new Date().toISOString().slice(0, 10)}\n`;
+function copyAllComments(pendingOnly) {
+  let md = `# Comment backlog${pendingOnly ? " (pending only)" : ""} — ${new Date().toISOString().slice(0, 10)}\n`;
   let total = 0;
   COMMENT_PAGES.forEach(p => {
-    const items = commentThread(p);
+    const items = commentThread(p).filter(c => !pendingOnly || !c.done);
     if (!items.length) return;
     md += `\n## ${PAGE_LABELS[p]}\n`;
     items.forEach(c => {
@@ -2376,8 +2550,8 @@ function copyAllComments() {
       md += `- [${box}] ${c.text.replace(/\s*\n\s*/g, " ")}${done}\n`;
     });
   });
-  if (!total) { showToast("No comments to copy yet."); return; }
-  const finish = ok => showToast(ok ? "Copied backlog as markdown checklist" : "Copy failed — select the text manually");
+  if (!total) { showToast(pendingOnly ? "No pending comments to copy." : "No comments to copy yet."); return; }
+  const finish = ok => showToast(ok ? (pendingOnly ? "Copied pending comments as checklist" : "Copied backlog as markdown checklist") : "Copy failed — select the text manually");
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(md).then(() => finish(true), () => fallbackCopy(md, finish));
   } else { fallbackCopy(md, finish); }
@@ -2392,7 +2566,9 @@ function fallbackCopy(text, cb) {
 document.getElementById("comment_bar_btn").addEventListener("click", openCommentDrawer);
 document.getElementById("cd_close").addEventListener("click", closeCommentDrawer);
 document.getElementById("comment_drawer_backdrop").addEventListener("click", closeCommentDrawer);
-document.getElementById("cd_copy").addEventListener("click", copyAllComments);
+document.getElementById("cd_copy").addEventListener("click", () => copyAllComments(false));
+document.getElementById("cd_copy_pending").addEventListener("click", () => copyAllComments(true));
+document.getElementById("cd_mark_all").addEventListener("click", markAllCommentsDone);
 document.querySelectorAll("[data-cd-filter]").forEach(b => b.addEventListener("click", () => {
   commentFilter = b.dataset.cdFilter;
   document.querySelectorAll("[data-cd-filter]").forEach(x => x.classList.toggle("active", x === b));
@@ -2778,6 +2954,242 @@ function renderJobQAHTML(j) {
   }
   html += `</div>`;
   return html;
+}
+
+// ============================================================================
+// INTERVIEW PREP — per-stage dates, questions, AI answers, review notes
+// ============================================================================
+const INTERVIEW_PRESETS = ["Phone screen", "Hiring manager", "Coding", "Final"];
+// The user-configurable preset list (Setup → Interviews); falls back to the built-in default.
+function interviewPresets() {
+  return (Array.isArray(state.interview_presets) && state.interview_presets.length) ? state.interview_presets : INTERVIEW_PRESETS;
+}
+function newInterviewStage(name) {
+  return { id: "ivs_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name || "New round", date: "", questions: [], review: "" };
+}
+// Seed preset stages the first time the Interview tab is opened (j.interviews === undefined).
+// Once seeded (even to []), it won't reseed — so deletes stick.
+function ensureInterviews(j) {
+  if (j.interviews === undefined) { j.interviews = interviewPresets().map(n => newInterviewStage(n)); saveState(); }
+  if (!Array.isArray(j.interviews)) j.interviews = [];
+  return j.interviews;
+}
+const ICON_SPARK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.456-2.456L14.25 6l1.035-.259a3.375 3.375 0 002.456-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>`;
+const ICON_COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/></svg>`;
+
+function renderJobInterviewsHTML(j) {
+  const stages = ensureInterviews(j);
+  let html = `<div class="card">
+    <div class="flex-between" style="margin-bottom:6px;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0">Interview prep</h3>
+      <div class="row" style="gap:6px;flex:0 0 auto">
+        <button class="btn ghost" onclick="addPresetInterviewStages('${j.id}')">+ Preset stages</button>
+        <button class="btn ghost" onclick="addInterviewStage('${j.id}')">+ Add stage</button>
+      </div>
+    </div>
+    <div class="muted small">Track each interview round: set the date, draft questions, and let Claude generate best-fit answers from your bios, the company notes, and your earlier rounds. Review notes roll up to the company.</div>
+  </div>`;
+
+  if (!stages.length) {
+    html += `<div class="card"><div class="muted small">No interview stages yet. Tap <b>+ Preset stages</b> to add Phone screen · Hiring manager · Coding · Final, or <b>+ Add stage</b> for a custom one.</div></div>`;
+    return html;
+  }
+
+  stages.forEach((s, si) => {
+    const qs = Array.isArray(s.questions) ? s.questions : (s.questions = []);
+    html += `<div class="card">
+      <div class="flex-between" style="gap:8px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1">
+          <span style="font-weight:700;font-size:15px;word-break:break-word">${escapeHtml(s.name)}</span>
+          <button class="icon-btn small" onclick="renameInterviewStage('${j.id}','${s.id}')" title="Rename stage" aria-label="Rename stage">${ICON_PENCIL}</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:2px;flex:0 0 auto">
+          <button class="icon-btn small" onclick="moveInterviewStage('${j.id}','${s.id}',-1)" title="Move up" aria-label="Move up" ${si === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg></button>
+          <button class="icon-btn small" onclick="moveInterviewStage('${j.id}','${s.id}',1)" title="Move down" aria-label="Move down" ${si === stages.length - 1 ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg></button>
+          <button class="icon-btn small danger" onclick="removeInterviewStage('${j.id}','${s.id}')" title="Remove stage" aria-label="Remove stage">${ICON_TRASH}</button>
+        </div>
+      </div>
+      <div class="row" style="align-items:center;gap:8px;margin-top:8px">
+        <label style="margin:0;flex:0 0 auto" class="small muted">Date</label>
+        <input type="date" value="${escapeHtml(s.date || "")}" onchange="setInterviewDate('${j.id}','${s.id}',this.value)" style="flex:0 0 auto;width:auto">
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="flex-between" style="margin-bottom:6px">
+          <span style="font-weight:600">Questions (${qs.length})</span>
+          <div class="row" style="gap:6px">
+            ${qs.length ? `<button class="btn ghost" style="padding:5px 9px" onclick="generateAllInterviewAnswers('${j.id}','${s.id}')">AI: answer all</button>` : ""}
+            <button class="btn ghost" style="padding:5px 9px" onclick="addInterviewQuestion('${j.id}','${s.id}')">+ Question</button>
+          </div>
+        </div>`;
+    if (!qs.length) {
+      html += `<div class="muted small">No questions yet. Add the ones you want to prepare for this round.</div>`;
+    } else {
+      qs.forEach(q => {
+        html += `<div style="border-top:1px solid var(--line);padding:10px 0">
+          <div style="font-weight:600;font-size:14px;margin-bottom:6px;display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap">
+            <span style="flex:1;min-width:0;word-break:break-word">${escapeHtml(q.text)}</span>
+            <button class="icon-btn small" onclick="editInterviewQuestion('${j.id}','${s.id}','${q.id}')" title="Edit question" aria-label="Edit question">${ICON_PENCIL}</button>
+          </div>
+          ${q.answer
+            ? `<div style="background:var(--soft);padding:10px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45">${escapeHtml(q.answer)}</div>`
+            : `<div class="muted small" style="padding:2px 0">No answer yet — tap the ✦ to generate one with Claude, or the pencil to write your own.</div>`}
+          <div class="row" style="gap:4px;margin-top:6px">
+            <button class="icon-btn small" onclick="generateInterviewAnswer('${j.id}','${s.id}','${q.id}')" title="AI generate answer (~$0.006)" aria-label="AI generate answer">${ICON_SPARK}</button>
+            <button class="icon-btn small" onclick="copyInterviewAnswer('${j.id}','${s.id}','${q.id}')" title="Copy answer" aria-label="Copy answer" ${q.answer ? "" : "disabled"}>${ICON_COPY}</button>
+            <button class="icon-btn small" onclick="editInterviewAnswer('${j.id}','${s.id}','${q.id}')" title="Edit answer" aria-label="Edit answer">${ICON_PENCIL}</button>
+            <button class="icon-btn small danger" onclick="deleteInterviewQuestion('${j.id}','${s.id}','${q.id}')" title="Delete question" aria-label="Delete question">${ICON_TRASH}</button>
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div>
+
+      <div style="margin-top:12px">
+        <label class="small muted" style="display:block;margin-bottom:4px">Review notes (how it went — fed to later rounds &amp; rolled up to the company)</label>
+        <textarea onblur="saveInterviewReview('${j.id}','${s.id}',this.value)" placeholder="What was asked, how you did, interviewer vibes, follow-ups…" style="min-height:60px">${escapeHtml(s.review || "")}</textarea>
+      </div>
+    </div>`;
+  });
+  return html;
+}
+
+// ---- Interview handlers (re-render the job detail, preserving the Interview sub-tab) ----
+function _ivJob(jobId) { return state.jobs.find(x => x.id === jobId); }
+function _ivStage(j, stageId) { return (j.interviews || []).find(s => s.id === stageId); }
+function _ivRerender(j) { subtabState["job"] = "interview"; renderJobDetail(j, false); }
+
+window.addInterviewStage = function(jobId) {
+  const j = _ivJob(jobId); if (!j) return;
+  const name = prompt("Stage name:", "New round");
+  if (name === null) return;
+  ensureInterviews(j).push(newInterviewStage((name || "").trim() || "New round"));
+  saveState(); _ivRerender(j);
+};
+window.addPresetInterviewStages = function(jobId) {
+  const j = _ivJob(jobId); if (!j) return;
+  const stages = ensureInterviews(j);
+  const have = new Set(stages.map(s => s.name.toLowerCase()));
+  let added = 0;
+  interviewPresets().forEach(n => { if (!have.has(n.toLowerCase())) { stages.push(newInterviewStage(n)); added++; } });
+  saveState(); _ivRerender(j);
+  showToast(added ? `Added ${added} preset stage${added === 1 ? "" : "s"}` : "All preset stages already present");
+};
+window.renameInterviewStage = function(jobId, stageId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); if (!s) return;
+  const nv = prompt("Stage name:", s.name);
+  if (nv === null || !nv.trim()) return;
+  s.name = nv.trim(); saveState(); _ivRerender(j);
+};
+window.removeInterviewStage = function(jobId, stageId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); if (!s) return;
+  if (!confirm(`Remove the "${s.name}" stage and its questions?`)) return;
+  // also clear this stage's rolled-up company note
+  const co = companyForJob(j); if (co) { upsertCompanyNote(co, j.id, stageId, ""); }
+  j.interviews = j.interviews.filter(x => x.id !== stageId);
+  saveState(); _ivRerender(j);
+};
+window.moveInterviewStage = function(jobId, stageId, dir) {
+  const j = _ivJob(jobId); if (!j || !Array.isArray(j.interviews)) return;
+  const i = j.interviews.findIndex(s => s.id === stageId);
+  const ni = i + dir;
+  if (i < 0 || ni < 0 || ni >= j.interviews.length) return;
+  const [s] = j.interviews.splice(i, 1); j.interviews.splice(ni, 0, s);
+  saveState(); _ivRerender(j);
+};
+window.setInterviewDate = function(jobId, stageId, value) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); if (!s) return;
+  s.date = value || ""; saveState();   // silent — no re-render (keeps focus/scroll)
+};
+window.addInterviewQuestion = function(jobId, stageId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); if (!s) return;
+  const text = prompt("Question to prepare:");
+  if (!text || !text.trim()) return;
+  s.questions.push({ id: "ivq_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text: text.trim(), answer: "", ai: false });
+  saveState(); _ivRerender(j);
+};
+window.editInterviewQuestion = function(jobId, stageId, qId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); const q = s && s.questions.find(x => x.id === qId); if (!q) return;
+  const nv = prompt("Edit question:", q.text);
+  if (nv === null) return;
+  if (!nv.trim()) { s.questions = s.questions.filter(x => x.id !== qId); }
+  else q.text = nv.trim();
+  saveState(); _ivRerender(j);
+};
+window.deleteInterviewQuestion = function(jobId, stageId, qId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); if (!s) return;
+  if (!confirm("Delete this question?")) return;
+  s.questions = s.questions.filter(x => x.id !== qId);
+  saveState(); _ivRerender(j);
+};
+window.editInterviewAnswer = function(jobId, stageId, qId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); const q = s && s.questions.find(x => x.id === qId); if (!q) return;
+  const nv = prompt("Edit answer:", q.answer || "");
+  if (nv === null) return;
+  q.answer = nv; q.ai = false; saveState(); _ivRerender(j);
+};
+window.copyInterviewAnswer = function(jobId, stageId, qId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); const q = s && s.questions.find(x => x.id === qId); if (!q || !q.answer) return;
+  window.copyText(null, q.answer);
+};
+window.saveInterviewReview = function(jobId, stageId, value) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); if (!s) return;
+  s.review = value || "";
+  const co = companyForJob(j);
+  if (co) upsertCompanyNote(co, j.id, stageId, s.review, `${j.title || j.id} — ${s.name}`);
+  saveState();   // silent — no re-render (keeps focus)
+};
+
+// AI answer for one interview question — uses bios, criteria persona, company context, earlier rounds.
+window.generateInterviewAnswer = async function(jobId, stageId, qId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); const q = s && s.questions.find(x => x.id === qId);
+  if (!q) return;
+  await _runInterviewAnswers(j, s, [q]);
+  _ivRerender(j);
+};
+window.generateAllInterviewAnswers = async function(jobId, stageId) {
+  const j = _ivJob(jobId); const s = j && _ivStage(j, stageId);
+  if (!s || !s.questions.length) return;
+  const targets = s.questions;
+  if (!confirm(`Generate AI answers for all ${targets.length} question(s) in "${s.name}"? (~$${(0.006 * targets.length).toFixed(3)} via Claude)`)) return;
+  await _runInterviewAnswers(j, s, targets);
+  _ivRerender(j);
+};
+// Shared worker: one Claude call per question (kept simple + cancellable per question).
+async function _runInterviewAnswers(j, stage, questions) {
+  const profile = state.profile || {};
+  const cs = (typeof criteriaForJob === "function" ? criteriaForJob(j) : null);
+  const persona = cs && cs.target_persona ? cs.target_persona : "";
+  const bioBlock = candidateBioBlock(1200);
+  const coBlock = companyContextBlock(j, 6);
+  // Earlier rounds' Q&A + review notes (context the candidate built up).
+  const stages = j.interviews || [];
+  const myIdx = stages.findIndex(s => s.id === stage.id);
+  const earlier = stages.slice(0, myIdx < 0 ? stages.length : myIdx)
+    .map(s => {
+      const qaTxt = (s.questions || []).filter(x => x.answer).map(x => `  Q: ${x.text}\n  A: ${x.answer}`).join("\n");
+      return `Round "${s.name}"${s.date ? " (" + s.date + ")" : ""}:\n${qaTxt || "  (no recorded answers)"}${s.review ? `\n  Review notes: ${s.review}` : ""}`;
+    }).join("\n\n");
+  showToast(questions.length > 1 ? `Generating ${questions.length} answers…` : "Generating answer…", 2500);
+  let ok = 0;
+  for (const q of questions) {
+    const prompt = `You are helping ${profile.full_name || "a senior frontend engineer"} (Toronto, senior frontend engineer) prepare a spoken answer for a job interview. Write a tailored, authentic answer in the FIRST PERSON, 3-6 sentences, neutral-confident tone, no exclamation marks, no headings. Draw on the candidate's real background; do not invent specific facts not supported by the context.
+
+ROLE: ${j.title || "?"} @ ${j.company || "?"}
+INTERVIEW ROUND: ${stage.name}
+${persona ? `What the candidate is looking for (target profile): ${persona}\n` : ""}${bioBlock ? `\nCANDIDATE BACKGROUND:\n${bioBlock}\n` : ""}${coBlock ? `\nCOMPANY CONTEXT (use to tailor "why this company" type answers):\n${coBlock}\n` : ""}${earlier ? `\nEARLIER ROUNDS (build on these, stay consistent):\n${earlier}\n` : ""}${(j.requirements || []).length ? `\nKey role requirements: ${(j.requirements || []).slice(0, 8).join("; ")}\n` : ""}
+QUESTION: ${q.text}
+
+Return ONLY the answer text — no preamble, no quotes.`;
+    try {
+      const result = await askClaude(prompt, [], 0.006, "haiku", "Interview answer", 700);
+      const text = (typeof result === "string" ? result : (result?.content || result?.text || "")).trim();
+      if (text) { q.answer = text; q.ai = true; ok++; }
+    } catch (e) {
+      showToast("AI answer failed: " + (e.message || e), 3500);
+    }
+  }
+  if (ok) { saveState(); showToast(ok > 1 ? `${ok} answers generated` : "Answer generated"); }
 }
 
 // Copy plain text to clipboard with toast
@@ -3314,7 +3726,10 @@ function chooseDestinationForJob(job, defaultBatchId) {
   return target;
 }
 
-document.getElementById("q_add_btn").addEventListener("click", () => openIntake({ from: "queue" }));
+document.getElementById("q_add_btn").addEventListener("click", () => showActionSheet("Add to your pipeline", [
+  { label: "Add a job", onClick: () => openIntake({ from: "queue" }) },
+  { label: "Add selected jobs to a batch", onClick: () => addSelectedToBatch() }
+]));
 document.getElementById("q_intake_back_btn").addEventListener("click", backToQueueFromIntake);
 document.getElementById("q_to_batches_btn").addEventListener("click", () => showTab("batches"));
 
@@ -3359,8 +3774,11 @@ function buildJobFromIntake({ urlOnly = false } = {}) {
     outcome: "Pending",
     custom_questions: [],
     qa: [],
+    interviews: undefined,   // lazily seeded with preset stages on first Interview-tab open
+    company_id: null,
     notes: ""
   };
+  linkJobToCompany(job);   // auto-match by name → else auto-create (overridable via Edit)
   // Only run screening if there's substantive content
   if ((job.raw_text && job.raw_text.length > 50) || job.tech_stack.length || job.requirements.length) {
     rescreenJob(job, state.active_criteria_id);
@@ -3550,10 +3968,12 @@ async function aiAssessOneSet(job, cs) {
   const raw = (job.raw_text || "").trim();
   if (raw.length < 50) throw new Error("JD text too short — paste the full posting first");
   const persona = (cs && cs.target_persona) ? cs.target_persona : "(no target persona defined for this set)";
+  const bioBlock = candidateBioBlock(1000);
+  const coBlock = companyContextBlock(job, 6);
   const prompt = `You assess how well a job matches a candidate's specific search profile. Focus on NUANCE a keyword filter misses: company type & culture, role substance, true seniority, and alignment with the target profile below. The candidate is a senior frontend engineer in Toronto who prefers stable, remote-friendly employers and avoids on-call / heavy production-support roles.
 
 Target profile for this search ("${cs ? cs.name : ""}"): ${persona}
-
+${bioBlock ? `\nCANDIDATE BACKGROUND (use to judge genuine fit, not just keywords):\n${bioBlock}\n` : ""}${coBlock ? `\nWHAT THE CANDIDATE KNOWS ABOUT THIS EMPLOYER (notes/research — weigh culture & stability signals):\n${coBlock}\n` : ""}
 Return ONLY valid JSON: {"fit": <integer 0-100>, "rationale": "<one or two sentences naming the strongest fit and misfit signals>"}. 100 = textbook match for THIS profile; 50 = generic senior FE role with no strong signal either way; 0 = clearly wrong company type or role. Judge profile alignment, not merely whether it is a frontend job.
 
 JOB POSTING:
@@ -3691,14 +4111,18 @@ function renderQueue() {
     if (loc) metaBits.push(escapeHtml(loc));
     if (arrangement) metaBits.push(escapeHtml(arrangement));
     if (salary) metaBits.push(salary);
+    const bestChip = best
+      ? `<div class="tags" style="margin-top:4px"><span class="muted small" style="align-self:center;margin-right:2px">Best fit:</span><span class="tag qualified">★ ${escapeHtml(best.cs.name)}${saQ[best.cs.id] && saQ[best.cs.id].score != null ? ` ${saQ[best.cs.id].score}%` : ""}</span></div>`
+      : (j.screening_all ? `<div class="tags" style="margin-top:4px"><span class="muted small">Fits no criteria set</span></div>` : "");
     card.innerHTML = `
       <div class="top">
-        ${isBatchable ? `<input type="checkbox" class="q_chk" data-id="${j.id}" aria-label="Select for batch" onclick="event.stopPropagation()">` : ""}
-        <div class="avatar" style="background:${color}" aria-hidden="true">${escapeHtml(initials)}</div>
         <div class="main">
-          <div class="title-line">
-            <span class="title">${escapeHtml(j.title)}</span>
-            <span class="company">· ${escapeHtml(j.id)}</span>
+          <div class="title-line" style="flex-wrap:nowrap;align-items:flex-start">
+            <span style="flex:1;min-width:0">
+              <span class="title">${escapeHtml(j.title)}</span>
+              <span class="company"> · ${escapeHtml(j.id)}</span>
+            </span>
+            ${isBatchable ? `<input type="checkbox" class="q_chk" data-id="${j.id}" aria-label="Select for batch" onclick="event.stopPropagation()" style="flex:0 0 auto;margin:3px 0 0;accent-color:var(--accent)">` : ""}
           </div>
           <div class="meta">${metaBits.join(" · ")}</div>
           <div class="tags">
@@ -3707,7 +4131,7 @@ function renderQueue() {
             ${target}
             <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
           </div>
-          ${fitsChips}
+          ${bestChip}
           <div class="actions">
             <button class="q_view" data-id="${j.id}" title="View details" aria-label="View details">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -3770,40 +4194,32 @@ document.getElementById("q_rescreen_all").addEventListener("click", () => {
   const scorable = state.jobs.filter(j => (j.raw_text || "").trim().length >= 50);
   if (scorable.length && confirmAiCost(scorable.length)) runAiFitBulk(scorable);
 });
-document.getElementById("q_add_to_batch").addEventListener("click", () => {
+// Add the selected unbatched jobs to a batch — shown as a bottom drawer (#U4), reached from the FAB (#U2).
+function addSelectedToBatch() {
   const ids = [...document.querySelectorAll(".q_chk:checked")].map(c => c.dataset.id);
-  if (!ids.length) { alert("Select at least one job first."); return; }
-  // Eligible target batches: drafts or analyzed (not yet submitted)
-  const candidates = state.batches.filter(b => b.status === "draft" || b.status === "analyzed");
-  if (!candidates.length) {
-    if (confirm("No open batches to add to. Create a new batch with the selected job(s)?")) {
-      const nb = createEmptyBatch();
-      ids.forEach(jid => { const j = state.jobs.find(j => j.id === jid); if (j) { nb.job_ids.push(jid); j.status = "batched"; j.batch_id = nb.id; } });
-      saveState(); showBatchDetail(nb.id); setTimeout(() => offerAutoAnalyze(nb), 200);
-    }
-    return;
-  }
-  // Build a numbered picker
-  const picker = candidates.slice().reverse().map((b, i) => `${i + 1}. ${b.id} — ${b.job_ids.length} job(s), ${b.status}`).join("\n");
-  const choice = prompt(`Add ${ids.length} selected job(s) to which batch?\n\n${picker}\n\nEnter number 1–${candidates.length}:`);
-  if (!choice) return;
-  const idx = parseInt(choice) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= candidates.length) { alert("Invalid choice."); return; }
-  const target = candidates.slice().reverse()[idx];
-  let added = 0;
-  ids.forEach(jid => {
-    if (target.job_ids.includes(jid)) return;
-    target.job_ids.push(jid);
-    const j = state.jobs.find(j => j.id === jid);
-    if (j) { j.status = "batched"; j.batch_id = target.id; }
-    added++;
-  });
-  saveState();
-  showToast(`Added ${added} job(s) to ${target.id}`, 3000);
-  renderQueue();
-  // Offer to auto-generate Q&A for the freshly-added jobs
-  setTimeout(() => offerAutoAnalyze(target), 200);
-});
+  if (!ids.length) { showToast("Select at least one job first (checkbox on each card)."); return; }
+  const moveInto = (target) => {
+    let added = 0;
+    ids.forEach(jid => {
+      if (target.job_ids.includes(jid)) return;
+      target.job_ids.push(jid);
+      const j = state.jobs.find(j => j.id === jid);
+      if (j) { j.status = "batched"; j.batch_id = target.id; }
+      added++;
+    });
+    saveState();
+    showToast(`Added ${added} job(s) to ${target.id}`, 3000);
+    renderQueue();
+    setTimeout(() => offerAutoAnalyze(target), 200);
+  };
+  const newBatch = () => { const nb = createEmptyBatch(); moveInto(nb); showBatchDetail(nb.id); };
+  // Eligible target batches: drafts or analyzed (not yet submitted), newest first.
+  const candidates = state.batches.filter(b => b.status === "draft" || b.status === "analyzed").slice().reverse();
+  const options = [{ label: "＋ New batch", onClick: newBatch }].concat(
+    candidates.map(b => ({ label: `${b.id} — ${b.job_ids.length} job(s), ${b.status}`, onClick: () => moveInto(b) }))
+  );
+  showActionSheet(`Add ${ids.length} selected job(s) to…`, options);
+}
 
 // Helper used after batch creation / add-to-batch: prompt to run analyzer
 function offerAutoAnalyze(batch) {
@@ -3963,6 +4379,7 @@ function renderJobDetail(j, editMode) {
     document.getElementById("e_save").addEventListener("click", () => {
       j.title = document.getElementById("e_title").value.trim();
       j.company = document.getElementById("e_company").value.trim();
+      linkJobToCompany(j);   // re-link if the company field changed (override)
       j.url = document.getElementById("e_url").value.trim();
       j.reference_id = document.getElementById("e_ref").value.trim();
       j.posted_date = document.getElementById("e_posted").value.trim();
@@ -4082,6 +4499,7 @@ Return JSON only.`;
         <button class="subtab-head" data-subtab="overview">Overview</button>
         <button class="subtab-head" data-subtab="screening">Screening</button>
         <button class="subtab-head" data-subtab="qa">App Q&amp;A</button>
+        <button class="subtab-head" data-subtab="interview">Interview</button>
         <button class="subtab-head" data-subtab="raw">Raw JD</button>
       </div>
       <div class="subtab-panels">
@@ -4091,6 +4509,7 @@ Return JSON only.`;
           <h3>Key fields</h3>
           <table>
             <tbody>
+              ${(() => { const _co = companyForJob(j); return _co ? `<tr><td class="muted" style="width:35%">Company</td><td><a href="#" onclick="event.preventDefault();openCompany('${escapeHtml(_co.id)}')" style="color:var(--accent)">${escapeHtml(_co.name)}</a>${(_co.notes || []).length || (_co.ai_summary || "").trim() ? ` <span class="muted small">(${(_co.notes || []).length} note${(_co.notes || []).length === 1 ? "" : "s"}${(_co.ai_summary || "").trim() ? ", summary" : ""})</span>` : ""}</td></tr>` : ""; })()}
               <tr><td class="muted" style="width:35%">Salary</td><td>${escapeHtml(salary)}</td></tr>
               <tr><td class="muted">Locations</td><td>${escapeHtml((j.locations||[]).join(", ") || "—")}</td></tr>
               <tr><td class="muted">Work arrangement</td><td>${escapeHtml(j.work_arrangement || "—")}</td></tr>
@@ -4128,6 +4547,10 @@ Return JSON only.`;
 
       <div class="subtab-panel" data-subtab="qa">
         ${renderJobQAHTML(j)}
+      </div>
+
+      <div class="subtab-panel" data-subtab="interview">
+        ${renderJobInterviewsHTML(j)}
       </div>
 
       <div class="subtab-panel" data-subtab="raw">
@@ -4455,25 +4878,16 @@ function applyBatchDetail(batchId, sub) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
           <div class="card">
-            <h3 style="margin:0 0 10px">Jobs in this batch (${jobs.length})</h3>
+            <div class="flex-between" style="margin:0 0 10px;gap:8px">
+              <h3 style="margin:0">Jobs in this batch (${jobs.length})</h3>
+              <button class="icon-btn ${batchJobFilter ? "active" : ""}" id="bj_filter_btn" title="Filter by status" aria-label="Filter by status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.792 2.938A49.069 49.069 0 0112 2.25c2.797 0 5.54.236 8.209.688a1.857 1.857 0 011.541 1.836v1.044a3 3 0 01-.879 2.121l-6.182 6.182a1.5 1.5 0 00-.439 1.061v2.927a3 3 0 01-1.658 2.684l-1.757.878A.75.75 0 019.75 21v-5.818a1.5 1.5 0 00-.44-1.06L3.13 7.938a3 3 0 01-.879-2.121V4.774c0-.897.64-1.683 1.542-1.836z"/></svg>
+              </button>
+            </div>
             <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
               <button class="btn ghost" id="bj_select_all">Select all</button>
               <span class="muted small" id="bj_selected_count">0 selected</span>
-              <select id="bj_filter_status" style="flex:1 1 150px;max-width:200px;margin-left:auto">
-                <option value="">All statuses</option>
-                <option value="batched">In batch</option>
-                <option value="submitted">Submitted</option>
-                <option value="phonescreen">Phone screen</option>
-                <option value="onsite">Onsite</option>
-                <option value="offer">Offer</option>
-                <option value="rejected_by_co">Rejected by company</option>
-                <option value="withdrawn">Withdrawn</option>
-                <option value="ghosted">Ghosted</option>
-              </select>
-            </div>
-            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-              <button class="btn ghost" id="bj_rescreen_all">Re-screen all</button>
-              <button class="btn ghost" id="bj_move_to" style="margin-left:auto" disabled>Move to…</button>
+              <button class="btn ghost" id="bj_rescreen_all" style="margin-left:auto">Re-screen all</button>
             </div>
             <div id="b_jobs_list"></div>
           </div>
@@ -4525,9 +4939,28 @@ function applyBatchDetail(batchId, sub) {
   document.getElementById("b_analyzer_btn").addEventListener("click", () => runBatchAnalyzer(b));
   document.getElementById("b_resume_imp_btn").addEventListener("click", () => runResumeImprovement(b));
   document.getElementById("b_help_btn").addEventListener("click", () => showBatchHelpModal());
-  document.getElementById("b_addjob_fab").addEventListener("click", () => openIntake({ from: "batch", batchId: b.id }));
-  const bjFilter = document.getElementById("bj_filter_status");
-  if (bjFilter) { bjFilter.value = batchJobFilter; bjFilter.addEventListener("change", () => { batchJobFilter = bjFilter.value; renderBatchJobs(b); }); }
+  document.getElementById("b_addjob_fab").addEventListener("click", () => {
+    const nSel = document.querySelectorAll(".bj_chk:checked").length;
+    const opts = [{ label: "Add a job", onClick: () => openIntake({ from: "batch", batchId: b.id }) }];
+    if (nSel) {
+      opts.push({ label: `Update status of ${nSel} selected…`, onClick: () => updateSelectedJobStatus(b) });
+      opts.push({ label: `Move ${nSel} selected to another batch…`, onClick: () => moveSelectedToBatch(b) });
+    }
+    showActionSheet("Batch actions", opts);
+  });
+  // Status filter is now an icon → bottom drawer (#B-filter).
+  document.getElementById("bj_filter_btn").addEventListener("click", () => {
+    const opts = [["", "All statuses"]].concat(JOB_STATUSES).map(([val, label]) => ({
+      label: (batchJobFilter === val ? "✓ " : "") + label,
+      onClick: () => {
+        batchJobFilter = val;
+        renderBatchJobs(b);
+        const fb = document.getElementById("bj_filter_btn");
+        if (fb) fb.classList.toggle("active", !!batchJobFilter);
+      }
+    }));
+    showActionSheet("Filter jobs by status", opts);
+  });
   document.getElementById("bj_select_all").addEventListener("click", () => {
     const boxes = [...document.querySelectorAll(".bj_chk")];
     if (!boxes.length) { showToast("No jobs to select"); return; }
@@ -4547,7 +4980,7 @@ function applyBatchDetail(batchId, sub) {
     const scorable = b.job_ids.map(id => state.jobs.find(x => x.id === id)).filter(j => j && (j.raw_text || "").trim().length >= 50);
     if (scorable.length && confirmAiCost(scorable.length)) runAiFitBulk(scorable).then(() => renderBatchJobs(b));
   });
-  document.getElementById("bj_move_to").addEventListener("click", () => moveSelectedToBatch(b));
+  // (Move-to now lives in the FAB drawer — #97.)
   document.getElementById("b_settings_toggle").addEventListener("click", () => {
     batchHeaderCollapsed = !batchHeaderCollapsed;
     document.getElementById("b_settings_body").style.display = batchHeaderCollapsed ? "none" : "block";
@@ -4738,19 +5171,21 @@ function renderBatchJobs(b) {
       : "";
     card.innerHTML = `
       <div class="top">
-        <input type="checkbox" class="bj_chk" data-id="${j.id}" aria-label="Select job" onclick="event.stopPropagation()">
-        <div class="avatar small" style="background:${color}" aria-hidden="true">${escapeHtml(initials)}</div>
         <div class="main">
-          <div class="title-line"><span class="title">${escapeHtml(j.title)}</span> <span class="company">· ${escapeHtml(j.company || "—")}</span></div>
+          <div class="title-line" style="flex-wrap:nowrap;align-items:flex-start">
+            <span style="flex:1;min-width:0">
+              <span class="title">${escapeHtml(j.title)}</span>
+              <span class="company"> · ${escapeHtml(j.company || "—")}</span>
+            </span>
+            <input type="checkbox" class="bj_chk" data-id="${j.id}" aria-label="Select job" onclick="event.stopPropagation()" style="flex:0 0 auto;margin:3px 0 0;accent-color:var(--accent)">
+          </div>
           ${metaBits.length ? `<div class="meta">${metaBits.join(" · ")}</div>` : ""}
           ${datesLine}
           <div class="tags" style="margin-top:6px">
             ${screenTag}${aiTag}
             <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
-            ${qaCount > 0 ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">${qaCount} Q&A</span>` : ""}
           </div>
           <div class="ctl-row" onclick="event.stopPropagation()">
-            <select class="j_status" data-id="${j.id}">${statusOpts}</select>
             <button class="icon-btn small j_view" data-id="${j.id}" title="View details" aria-label="View details">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </button>
@@ -4830,33 +5265,49 @@ function updateBatchJobSelected() {
   const n = boxes.filter(x => x.checked).length;
   const cnt = document.getElementById("bj_selected_count");
   if (cnt) cnt.textContent = `${n} selected`;
-  const mv = document.getElementById("bj_move_to");
-  if (mv) mv.disabled = n === 0;
   const sa = document.getElementById("bj_select_all");
   if (sa) sa.textContent = (boxes.length && n === boxes.length) ? "Deselect all" : "Select all";
 }
 
-// Move the checked jobs from batch b into another open batch (#9).
+// Update the status of the checked jobs via a bottom drawer (#B1 — replaces per-card dropdown).
+const JOB_STATUSES = [["batched", "In batch"], ["submitted", "Submitted"], ["phonescreen", "Phone screen"], ["onsite", "Onsite"], ["offer", "Offer"], ["rejected_by_co", "Rejected by company"], ["withdrawn", "Withdrawn"], ["ghosted", "Ghosted"]];
+function updateSelectedJobStatus(b) {
+  const ids = [...document.querySelectorAll(".bj_chk:checked")].map(c => c.dataset.id);
+  if (!ids.length) { showToast("Select at least one job first."); return; }
+  showActionSheet(`Set status of ${ids.length} job(s) to…`, JOB_STATUSES.map(([val, label]) => ({
+    label,
+    onClick: () => {
+      ids.forEach(jid => {
+        const j = state.jobs.find(x => x.id === jid); if (!j) return;
+        j.status = val;
+        if (val === "phonescreen" && !j.phone_screen_at) j.phone_screen_at = nowISO();
+        if (["phonescreen", "onsite", "offer", "rejected_by_co"].includes(val) && !j.response_at) j.response_at = nowISO();
+      });
+      saveState();
+      showToast(`Updated ${ids.length} job(s) → ${val}`, 3000);
+      renderBatchJobs(b);
+    }
+  })));
+}
+
+// Move the checked jobs from batch b into another open batch (#9) — bottom drawer.
 function moveSelectedToBatch(b) {
   const ids = [...document.querySelectorAll(".bj_chk:checked")].map(c => c.dataset.id);
-  if (!ids.length) return;
-  const candidates = state.batches.filter(x => x.id !== b.id && (x.status === "draft" || x.status === "analyzed"));
-  if (!candidates.length) { alert("No other open batches to move to. Create one first with the + button on the Batches list."); return; }
-  const lines = candidates.map((x, i) => `${i + 1}. ${x.id} — ${x.job_ids.length} job(s), ${x.status}`).join("\n");
-  const choice = prompt(`Move ${ids.length} job(s) to which batch?\n\n${lines}\n\nEnter a number:`);
-  if (choice === null) return;
-  const idx = parseInt(choice, 10);
-  if (!idx || isNaN(idx) || idx < 1 || idx > candidates.length) { alert("Invalid choice."); return; }
-  const target = candidates[idx - 1];
-  ids.forEach(jid => {
-    b.job_ids = b.job_ids.filter(x => x !== jid);
-    if (!target.job_ids.includes(jid)) target.job_ids.push(jid);
-    const j = state.jobs.find(x => x.id === jid);
-    if (j) { j.batch_id = target.id; if (j.status === "queued") j.status = "batched"; }
-  });
-  saveState();
-  showToast(`Moved ${ids.length} job(s) to ${target.id}`, 3000);
-  showBatchDetail(b.id);
+  if (!ids.length) { showToast("Select at least one job first."); return; }
+  const candidates = state.batches.filter(x => x.id !== b.id && (x.status === "draft" || x.status === "analyzed")).slice().reverse();
+  if (!candidates.length) { showToast("No other open batches to move to. Create one with + on the Batches list."); return; }
+  const moveInto = (target) => {
+    ids.forEach(jid => {
+      b.job_ids = b.job_ids.filter(x => x !== jid);
+      if (!target.job_ids.includes(jid)) target.job_ids.push(jid);
+      const j = state.jobs.find(x => x.id === jid);
+      if (j) { j.batch_id = target.id; if (j.status === "queued") j.status = "batched"; }
+    });
+    saveState();
+    showToast(`Moved ${ids.length} job(s) to ${target.id}`, 3000);
+    showBatchDetail(b.id);
+  };
+  showActionSheet(`Move ${ids.length} job(s) to…`, candidates.map(x => ({ label: `${x.id} — ${x.job_ids.length} job(s), ${x.status}`, onClick: () => moveInto(x) })));
 }
 
 // ============================================================================
@@ -5174,6 +5625,257 @@ Return ONLY valid JSON:
 // ============================================================================
 // RESUMES view
 // ============================================================================
+// ============================================================================
+// COMPANIES sub-tab (under Setup) — list + in-panel detail
+// ============================================================================
+let companyDetailId = null;   // when set, the Companies panel shows that company's detail
+
+function renderCompanies() {
+  const panel = document.getElementById("rt_panel_companies");
+  if (!panel) return;
+  if (companyDetailId && companyById(companyDetailId)) renderCompanyDetail(companyDetailId);
+  else { companyDetailId = null; renderCompaniesList(); }
+}
+
+// Jump to a company's detail from anywhere (e.g. a job page).
+window.openCompany = function(id) {
+  if (!companyById(id)) return;
+  companyDetailId = id;
+  if (typeof setSubtab === "function") subtabState["resumes"] = "companies";
+  navigate("#/setup/companies");
+  setTimeout(() => { if (typeof setSubtab === "function") setSubtab("resumes", "companies"); renderCompanyDetail(id); }, 0);
+};
+
+function renderCompaniesList() {
+  const panel = document.getElementById("rt_panel_companies");
+  if (!panel) return;
+  const companies = (state.companies || []).slice().sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
+  panel.innerHTML = `
+    <div class="notice">Companies are created automatically from each job's employer. Notes &amp; an AI summary here are fed into AI screening for every job at that company.</div>
+    <button class="fab" id="co_new_btn" title="Add a company" aria-label="Add a company">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <div class="card">
+      <h3 style="margin:0 0 10px">Companies (${companies.length})</h3>
+      <div id="co_list"></div>
+    </div>`;
+  const list = panel.querySelector("#co_list");
+  if (!companies.length) {
+    list.innerHTML = `<div class="muted small">No companies yet. They'll appear here as you add jobs, or tap + to add one.</div>`;
+  }
+  companies.forEach(c => {
+    const jobs = jobsForCompany(c);
+    const nNotes = (c.notes || []).length;
+    const item = document.createElement("div");
+    item.className = "list-item";
+    item.style.cursor = "pointer";
+    item.innerHTML = `
+      <div class="avatar" style="background:${avatarColor(c.name)};flex:none" aria-hidden="true">${escapeHtml(avatarInitials(c.name))}</div>
+      <div class="grow">
+        <div><b>${escapeHtml(c.name)}</b></div>
+        <div class="muted small">${jobs.length} job${jobs.length === 1 ? "" : "s"} · ${nNotes} note${nNotes === 1 ? "" : "s"}${(c.ai_summary || "").trim() ? " · AI summary ✓" : ""}</div>
+      </div>
+      <span aria-hidden="true" style="font-size:22px;color:var(--muted-2);line-height:1">›</span>`;
+    item.addEventListener("click", () => { companyDetailId = c.id; renderCompanyDetail(c.id); });
+    list.appendChild(item);
+  });
+  panel.querySelector("#co_new_btn").addEventListener("click", () => {
+    const name = prompt("Company name:");
+    if (!name || !name.trim()) return;
+    const c = findOrCreateCompany(name.trim());
+    saveState();
+    companyDetailId = c.id;
+    renderCompanyDetail(c.id);
+  });
+}
+
+const ICON_TRASH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>`;
+const ICON_PENCIL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>`;
+
+function renderCompanyDetail(id) {
+  const panel = document.getElementById("rt_panel_companies");
+  const c = companyById(id);
+  if (!panel) return;
+  if (!c) { companyDetailId = null; renderCompaniesList(); return; }
+  const jobs = jobsForCompany(c);
+  panel.innerHTML = `
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:10px">
+        <button class="btn ghost" id="co_back" style="padding:6px 10px">‹ All companies</button>
+        <button class="icon-btn danger" id="co_delete" title="Delete company" aria-label="Delete company">${ICON_TRASH}</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar" style="background:${avatarColor(c.name)};flex:none" aria-hidden="true">${escapeHtml(avatarInitials(c.name))}</div>
+        <div class="grow"><input type="text" id="co_name" value="${escapeHtml(c.name)}" style="font-size:16px;font-weight:700"></div>
+      </div>
+      <div class="muted small" style="margin-top:8px">${jobs.length
+        ? "Mapped jobs: " + jobs.map(j => `<a href="#/job/${encodeURIComponent(j.id)}" style="color:var(--accent)">${escapeHtml(j.title)}</a>`).join(", ")
+        : "No jobs mapped yet."}</div>
+    </div>
+
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:8px">
+        <h3 style="margin:0">AI summary</h3>
+        <button class="btn ghost" id="co_summary_btn" style="padding:6px 10px">${(c.ai_summary || "").trim() ? "Regenerate" : "Generate"} (~$0.005)</button>
+      </div>
+      ${(c.ai_summary || "").trim()
+        ? `<div style="white-space:pre-wrap;line-height:1.5">${escapeHtml(c.ai_summary)}</div><div class="muted small" style="margin-top:6px">Generated ${escapeHtml((c.ai_summary_at || "").slice(0, 10))} from ${(c.notes || []).length} note(s)</div>`
+        : `<div class="muted small">No summary yet. Add notes below, then Generate — Claude condenses your historical notes into a summary that's fed into AI screening for this employer.</div>`}
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px">Notes (${(c.notes || []).length})</h3>
+      <div class="row"><div class="col">
+        <textarea id="co_new_note" placeholder="Add a note — culture, stability, recruiter conversations, anything. Kept as history and fed to AI screening." style="min-height:60px"></textarea>
+      </div></div>
+      <div class="row" style="margin-top:6px"><button class="btn" id="co_add_note">Add note</button></div>
+      <div id="co_notes_list" style="margin-top:12px"></div>
+    </div>`;
+
+  panel.querySelector("#co_back").addEventListener("click", () => { companyDetailId = null; renderCompaniesList(); });
+  const nameInput = panel.querySelector("#co_name");
+  nameInput.addEventListener("change", () => {
+    const nv = nameInput.value.trim();
+    if (!nv) { nameInput.value = c.name; return; }
+    c.name = nv; c.norm = normalizeCompanyName(nv); c.updated_at = nowISO();
+    saveState(); renderCompanyDetail(c.id);
+  });
+  panel.querySelector("#co_delete").addEventListener("click", () => {
+    if (!confirm(`Delete company "${c.name}"? Jobs stay, but lose their company link & shared notes.`)) return;
+    jobsForCompany(c).forEach(j => { if (j.company_id === c.id) j.company_id = null; });
+    state.companies = state.companies.filter(x => x.id !== c.id);
+    companyDetailId = null; saveState(); renderCompaniesList();
+  });
+  panel.querySelector("#co_add_note").addEventListener("click", () => {
+    const ta = panel.querySelector("#co_new_note");
+    if (!ta.value.trim()) return;
+    addCompanyNote(c, ta.value, "manual");
+    saveState(); renderCompanyDetail(c.id);
+  });
+  panel.querySelector("#co_summary_btn").addEventListener("click", () => runCompanySummary(c.id));
+  renderCompanyNotesList(c);
+}
+
+function renderCompanyNotesList(c) {
+  const root = document.getElementById("co_notes_list");
+  if (!root) return;
+  const notes = (c.notes || []).slice().reverse();   // newest first
+  if (!notes.length) { root.innerHTML = `<div class="muted small">No notes yet.</div>`; return; }
+  root.innerHTML = notes.map(n => `
+    <div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+      <div class="flex-between" style="margin-bottom:4px">
+        <span class="muted small">${escapeHtml((n.at || "").slice(0, 10))}${n.source === "interview" ? ' · <span class="tag">interview</span>' : ""}</span>
+        <span style="display:flex;gap:4px">
+          <button class="icon-btn small co_note_edit" data-id="${escapeHtml(n.id)}" title="Edit" aria-label="Edit">${ICON_PENCIL}</button>
+          <button class="icon-btn small danger co_note_del" data-id="${escapeHtml(n.id)}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
+        </span>
+      </div>
+      <div style="white-space:pre-wrap;line-height:1.5">${escapeHtml(n.text)}</div>
+    </div>`).join("");
+  root.querySelectorAll(".co_note_del").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    if (!confirm("Delete this note?")) return;
+    c.notes = c.notes.filter(x => x.id !== id); c.updated_at = nowISO();
+    saveState(); renderCompanyDetail(c.id);
+  }));
+  root.querySelectorAll(".co_note_edit").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    const n = c.notes.find(x => x.id === id); if (!n) return;
+    const nv = prompt("Edit note:", n.text);
+    if (nv === null) return;
+    if (!nv.trim()) c.notes = c.notes.filter(x => x.id !== id);
+    else { n.text = nv.trim(); n.at = nowISO(); }
+    c.updated_at = nowISO(); saveState(); renderCompanyDetail(c.id);
+  }));
+}
+
+async function runCompanySummary(id) {
+  const c = companyById(id);
+  if (!c) return;
+  const notes = (c.notes || []);
+  if (!notes.length) { alert("Add at least one note first — the summary is built from your notes."); return; }
+  if (!confirm(`Generate an AI summary of "${c.name}" from its ${notes.length} note(s)? (~$0.005 via Claude)`)) return;
+  const btn = document.getElementById("co_summary_btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Summarizing…"; }
+  try {
+    const prompt = `You are condensing a job-seeker's accumulated notes about a prospective employer into a concise reference summary. The candidate is a senior frontend engineer in Toronto who prefers stable, established, remote-friendly employers.
+
+COMPANY: ${c.name}
+
+NOTES (chronological):
+${notes.map(n => `- (${(n.at || "").slice(0, 10)}) ${n.text}`).join("\n").slice(0, 6000)}
+
+Write a neutral 3-6 sentence summary capturing: what the company does, culture/stability signals, anything relevant to interviewing or deciding to apply, and any red/green flags the notes raise. Plain prose — no headings, no bullet points. Return ONLY the summary text.`;
+    const result = await askClaude(prompt, [], 0.005, "haiku", "Company summary", 800);
+    const text = (typeof result === "string" ? result : (result?.content || result?.text || "")).trim();
+    if (!text) throw new Error("Empty response");
+    c.ai_summary = text; c.ai_summary_at = nowISO(); c.updated_at = nowISO();
+    saveState(); renderCompanyDetail(c.id);
+    showToast("Company summary updated");
+  } catch (e) {
+    alert("Summary failed: " + (e.message || e));
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ============================================================================
+// INTERVIEW PRESETS sub-tab (Setup) — configurable default stages for new jobs
+// ============================================================================
+function renderInterviewPresets() {
+  const panel = document.getElementById("rt_panel_interviews");
+  if (!panel) return;
+  const presets = interviewPresets();
+  panel.innerHTML = `
+    <div class="notice">These are the default interview stages seeded into each job's <b>Interview</b> tab (and added by "+ Preset stages" there). Editing them here doesn't change jobs you've already opened.</div>
+    <button class="fab" id="ivp_new_btn" title="Add a preset stage" aria-label="Add a preset stage">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <div class="card">
+      <h3 style="margin:0 0 10px">Interview stage presets (${presets.length})</h3>
+      <div id="ivp_list"></div>
+    </div>`;
+  const list = panel.querySelector("#ivp_list");
+  if (!presets.length) list.innerHTML = `<div class="muted small">No presets. Tap + to add one (e.g. Phone screen).</div>`;
+  presets.forEach((name, i) => {
+    const item = document.createElement("div");
+    item.className = "list-item";
+    item.innerHTML = `
+      <div class="grow"><b>${escapeHtml(name)}</b></div>
+      <div style="display:flex;gap:2px;flex:0 0 auto">
+        <button class="icon-btn small ivp_up" data-i="${i}" title="Move up" aria-label="Move up" ${i === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg></button>
+        <button class="icon-btn small ivp_down" data-i="${i}" title="Move down" aria-label="Move down" ${i === presets.length - 1 ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg></button>
+        <button class="icon-btn small ivp_edit" data-i="${i}" title="Rename" aria-label="Rename">${ICON_PENCIL}</button>
+        <button class="icon-btn small danger ivp_del" data-i="${i}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
+      </div>`;
+    list.appendChild(item);
+  });
+  panel.querySelector("#ivp_new_btn").addEventListener("click", () => {
+    const name = prompt("New interview stage name:");
+    if (!name || !name.trim()) return;
+    state.interview_presets = interviewPresets().slice(); state.interview_presets.push(name.trim());
+    saveState(); renderInterviewPresets();
+  });
+  list.querySelectorAll(".ivp_edit").forEach(b => b.addEventListener("click", e => {
+    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
+    const nv = prompt("Rename stage:", arr[i]); if (nv === null) return;
+    if (!nv.trim()) arr.splice(i, 1); else arr[i] = nv.trim();
+    state.interview_presets = arr; saveState(); renderInterviewPresets();
+  }));
+  list.querySelectorAll(".ivp_del").forEach(b => b.addEventListener("click", e => {
+    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
+    if (!confirm(`Delete preset "${arr[i]}"?`)) return;
+    arr.splice(i, 1); state.interview_presets = arr; saveState(); renderInterviewPresets();
+  }));
+  list.querySelectorAll(".ivp_up").forEach(b => b.addEventListener("click", e => {
+    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
+    if (i <= 0) return; [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; state.interview_presets = arr; saveState(); renderInterviewPresets();
+  }));
+  list.querySelectorAll(".ivp_down").forEach(b => b.addEventListener("click", e => {
+    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
+    if (i >= arr.length - 1) return; [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]]; state.interview_presets = arr; saveState(); renderInterviewPresets();
+  }));
+}
+
 function renderResumes() {
   const root = document.getElementById("r_list");
   root.innerHTML = "";
@@ -5208,9 +5910,11 @@ function renderResumes() {
     if (confirm("Delete this resume version?")) { state.resumes.versions = state.resumes.versions.filter(v => v.id !== id); saveState(); renderResumes(); }
   }));
   root.querySelectorAll(".r_gen").forEach(b => b.addEventListener("click", e => showGenerateResumeModal(e.currentTarget.dataset.id)));
-  // Populate the sibling sub-tabs (criteria + templates now live on this page too).
+  // Populate the sibling sub-tabs (criteria + templates + companies now live on this page too).
   if (typeof showCriteriaListView === "function" && document.getElementById("crit_list")) showCriteriaListView();
   if (typeof renderTemplatesList === "function" && document.getElementById("s_templates_list")) renderTemplatesList();
+  if (typeof renderCompanies === "function" && document.getElementById("rt_panel_companies")) renderCompanies();
+  if (typeof renderInterviewPresets === "function" && document.getElementById("rt_panel_interviews")) renderInterviewPresets();
 }
 // (Top-level Compare card removed — diff now lives inside the edit form below)
 
@@ -5329,13 +6033,13 @@ function showGenerateResumeModal(versionId) {
   if (v.generated_html) {
     document.getElementById("g_preview").innerHTML = `
       <details open>
-        <summary class="muted small">Preview (scaled to fit)</summary>
-        <div class="row" style="justify-content:flex-end;margin-top:6px">
-          <button class="icon-btn" id="g_fullscreen" title="View full screen" aria-label="View full screen">
+        <summary class="muted small" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none">
+          <span>Preview (scaled to fit)</span>
+          <button class="icon-btn" id="g_fullscreen" title="View full screen" aria-label="View full screen" onclick="event.preventDefault();event.stopPropagation();">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
           </button>
-        </div>
-        <div id="g_preview_wrap" style="overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:62vh;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff">
+        </summary>
+        <div id="g_preview_wrap" style="overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:70vh;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff">
           <iframe id="g_preview_frame" srcdoc="${escapeHtml(injectPrintReset(v.generated_html))}" scrolling="no" style="border:0;display:block;background:#fff"></iframe>
         </div>
       </details>`;
@@ -5445,8 +6149,11 @@ function scaleResumePreview() {
     frame.style.zoom = scale;
   };
   apply();
-  // Content height isn't known until the srcdoc finishes parsing — re-measure on load.
+  // Content height isn't known until the srcdoc finishes parsing + fonts settle — re-measure
+  // on load and a couple of delays so multi-page resumes aren't clipped (you can scroll to the end).
   frame.addEventListener("load", apply, { once: true });
+  setTimeout(apply, 120);
+  setTimeout(apply, 450);
 }
 
 // Full-screen resume preview overlay (#17). Scales the A4 doc to fit the viewport width; scrolls vertically.
@@ -5470,6 +6177,8 @@ function showResumeFullscreen(html) {
   };
   frame.addEventListener("load", fit, { once: true });
   setTimeout(fit, 60);
+  setTimeout(fit, 250);
+  setTimeout(fit, 600);
   ov.querySelector("#rfs_close").addEventListener("click", () => ov.remove());
 }
 
@@ -6150,9 +6859,9 @@ function hideLock() {
 bindSetupInputs();
 relocateResumeSubtabs();   // move criteria + templates cards into the Resumes sub-tab panels
 // Pre-seed the resumes sub-tab from a deep link so the initial init doesn't clobber it before route() runs.
-const _rsub = (location.hash || "").match(/^#\/resumes\/([^/]+)/);
+const _rsub = (location.hash || "").match(/^#\/(?:setup|resumes)\/([^/]+)/);
 if (_rsub) subtabState["resumes"] = decodeURIComponent(_rsub[1]);
-initSubtabs(document.querySelector('.subtabs[data-subtab-group="resumes"]'), { hashFor: k => location.hash.startsWith("#/resumes") ? "#/resumes/" + k : null });
+initSubtabs(document.querySelector('.subtabs[data-subtab-group="resumes"]'), { hashFor: k => (location.hash.startsWith("#/setup") || location.hash.startsWith("#/resumes")) ? "#/setup/" + k : null });
 route();   // apply the initial view from location.hash (defaults to #/batches)
 updateCostCounter();
 setSyncIndicator(state.settings?.last_synced_at ? "synced" : "off");
