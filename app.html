@@ -853,10 +853,14 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 <section class="view" data-view="batches">
   <h2>Batches</h2>
   <div id="b_list_view">
-    <div class="notice">Each batch groups a set of qualified jobs you work on together. Run the analyzer, choose a resume version, mark submitted, track responses.</div>
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <button class="btn" id="b_add_batch_btn">+ Batch</button>
+      <button class="btn ghost" id="b_add_job_list_btn">+ Add job</button>
+      <select id="b_filter_criteria" title="Filter batches by criteria set" style="flex:1 1 150px;max-width:240px;margin-left:auto"></select>
+    </div>
     <div id="b_unbatched_bucket"></div>
     <div class="card" id="b_list_card">
-      <div class="muted small" id="b_empty" style="text-align:center;padding:20px;display:none">No batches yet. Open <b>Unbatched</b> above, select some jobs, and create one.</div>
+      <div class="muted small" id="b_empty" style="text-align:center;padding:20px;display:none">No batches yet. Tap <b>+ Batch</b>, or open <b>Unbatched</b> above and create one from selected jobs.</div>
       <div id="b_list"></div>
     </div>
   </div>
@@ -1322,9 +1326,15 @@ function makeCriteriaSets() {
 const LS_KEY = "phone_screen_app_v1";
 let state = loadState();
 // Returns the criteria set currently active for queue screening
+// A criteria set is "enabled" unless explicitly disabled (enabled === false). Disabled sets are
+// skipped in screening / fit display and hidden from the active-set pickers, but config is kept.
+function csEnabled(cs) { return cs && cs.enabled !== false; }
+function enabledCriteriaSets() { return (state.criteria_sets || []).filter(csEnabled); }
 function activeCriteria() {
   const sets = state.criteria_sets || [];
-  return sets.find(c => c.id === state.active_criteria_id) || sets[0];
+  let cs = sets.find(c => c.id === state.active_criteria_id);
+  if (!cs || !csEnabled(cs)) cs = enabledCriteriaSets()[0] || sets[0];
+  return cs;
 }
 function criteriaById(id) { return (state.criteria_sets || []).find(c => c.id === id); }
 // The criteria a given job should be screened against: its batch's set if batched, else the active set.
@@ -1352,7 +1362,7 @@ function rescreenJob(job, primarySetId) {
 // Which criteria sets a job currently qualifies for (uses cached screening_all).
 function fitsSets(job) {
   const all = job.screening_all || {};
-  return (state.criteria_sets || []).filter(cs => all[cs.id] && all[cs.id].qualified);
+  return enabledCriteriaSets().filter(cs => all[cs.id] && all[cs.id].qualified);
 }
 // Fit strength for ranking — the graded match % (already factors target company,
 // comp, stack, remote, FE), with a tiny dealbreaker tiebreaker (favors fewer).
@@ -1363,7 +1373,7 @@ function fitScore(r) {
 // All sets ranked best-first: qualified sets before non-qualified, each group by fitScore desc.
 function rankedFitSets(job) {
   const sa = job.screening_all || {};
-  return (state.criteria_sets || [])
+  return enabledCriteriaSets()
     .map(cs => ({ cs, r: sa[cs.id], score: fitScore(sa[cs.id]) }))
     .sort((a, b) => {
       const aq = a.r?.qualified ? 1 : 0, bq = b.r?.qualified ? 1 : 0;
@@ -1891,6 +1901,7 @@ function route() {
     case "job":
       if (parts[1]) { applyJobDetail(decodeURIComponent(parts[1])); return; }
       break;
+    case "add":       applyTab("queue"); showIntakeView(); return;   // job-intake form (lives in the queue section)
     case "queue":     applyTab("queue"); return;
     case "resumes":   applyTab("resumes"); return;
     case "dashboard": applyTab("dashboard"); return;
@@ -2376,11 +2387,17 @@ function renderCriteriaList() {
   if (!root) return;
   root.innerHTML = (state.criteria_sets || []).map(cs => {
     const isActive = cs.id === state.active_criteria_id;
-    return `<div class="list-item" data-cid="${escapeHtml(cs.id)}" style="cursor:pointer">
+    const enabled = csEnabled(cs);
+    return `<div class="list-item" data-cid="${escapeHtml(cs.id)}" style="cursor:pointer${enabled ? "" : ";opacity:.55"}">
       <div class="grow">
-        <div><b>${escapeHtml(cs.name)}</b>${isActive ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">active</span>` : ""}</div>
+        <div><b>${escapeHtml(cs.name)}</b>${isActive && enabled ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">active</span>` : ""}${!enabled ? ` <span class="tag rejected">off</span>` : ""}</div>
         <div class="muted small">${(cs.target_companies||[]).length} target companies · floor ${cs.comp_floor ? "$"+cs.comp_floor/1000+"k" : "—"}${cs.min_frontend_percent ? " · FE ≥ "+cs.min_frontend_percent+"%" : ""}</div>
       </div>
+      <button class="icon-btn c_toggle" data-id="${escapeHtml(cs.id)}" title="${enabled ? "Disable (skip in screening; keeps config)" : "Enable (use in screening)"}" aria-label="${enabled ? "Disable" : "Enable"}">
+        ${enabled
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.243 4.243L9.88 9.88"/></svg>`}
+      </button>
       <button class="icon-btn c_edit" data-id="${escapeHtml(cs.id)}" title="Edit" aria-label="Edit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
       </button>
@@ -2394,6 +2411,23 @@ function renderCriteriaList() {
     openCriteriaEditor(el.dataset.cid);
   }));
   root.querySelectorAll(".c_edit").forEach(b => b.addEventListener("click", e => openCriteriaEditor(e.currentTarget.dataset.id)));
+  root.querySelectorAll(".c_toggle").forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation();
+    const id = e.currentTarget.dataset.id;
+    const cs = criteriaById(id);
+    if (!cs) return;
+    if (csEnabled(cs)) {
+      if (enabledCriteriaSets().length <= 1) { alert("Keep at least one criteria set enabled — screening needs one."); return; }
+      cs.enabled = false;
+      // If this was the active set, hand active off to another enabled set.
+      if (state.active_criteria_id === id) state.active_criteria_id = enabledCriteriaSets()[0].id;
+    } else {
+      cs.enabled = true;
+    }
+    saveState();
+    renderCriteriaList();
+    showToast(csEnabled(cs) ? `"${cs.name}" enabled` : `"${cs.name}" disabled — skipped in screening`);
+  }));
   root.querySelectorAll(".c_del").forEach(b => b.addEventListener("click", e => {
     const id = e.currentTarget.dataset.id;
     if ((state.criteria_sets || []).length <= 1) { alert("Keep at least one criteria set."); return; }
@@ -3160,6 +3194,11 @@ document.getElementById("j_cancel_btn").addEventListener("click", () => {
 });
 
 // + Add job button (in queue list view) → show intake sub-view
+let intakeCtx = { from: "queue" };   // where a newly-added job should go after save
+
+// Open the job-intake form via the router. ctx: {from:"queue"} | {from:"batches"} | {from:"batch", batchId}
+function openIntake(ctx) { intakeCtx = ctx || { from: "queue" }; navigate("#/add"); }
+
 function showIntakeView() {
   document.getElementById("q_list_view").style.display = "none";
   document.getElementById("q_intake_view").style.display = "block";
@@ -3173,10 +3212,46 @@ function showIntakeView() {
 }
 function backToQueueFromIntake() {
   document.getElementById("q_intake_view").style.display = "none";
-  renderQueue();
-  window.scrollTo(0, 0);
+  const ctx = intakeCtx; intakeCtx = { from: "queue" };
+  if (ctx.from === "batch" && ctx.batchId && state.batches.some(b => b.id === ctx.batchId)) { showBatchDetail(ctx.batchId); return; }
+  if (ctx.from === "batches") { showTab("batches"); return; }
+  showTab("queue");
 }
-document.getElementById("q_add_btn").addEventListener("click", showIntakeView);
+
+// Create an empty draft batch and return it (used by Add-batch and Add-job destination).
+function createEmptyBatch() {
+  const id = "batch_" + String(state.nextBatchId++).padStart(3, "0");
+  const batch = { id, created_at: nowISO(), status: "draft", job_ids: [], resume_version_id: null, analysis: null, criteria_id: state.active_criteria_id, submitted_at: null };
+  state.batches.push(batch);
+  saveState();
+  return batch;
+}
+
+// After adding a job from the Batches page, ask where it goes. Returns the target batch, or null
+// (null = leave in Unbatched). Mutates job + batch state.
+function chooseDestinationForJob(job, defaultBatchId) {
+  const candidates = state.batches.filter(b => b.status === "draft" || b.status === "analyzed");
+  if (!candidates.length) {
+    if (confirm(`No open batches yet. Create a new batch for "${job.title}"?\n\n(Cancel = leave it in Unbatched.)`)) {
+      const nb = createEmptyBatch();
+      nb.job_ids.push(job.id); job.status = "batched"; job.batch_id = nb.id; saveState();
+      return nb;
+    }
+    return null;
+  }
+  const lines = candidates.map((b, i) => `${i + 1}. ${b.id} — ${b.job_ids.length} job(s), ${b.status}`).join("\n");
+  const defIdx = defaultBatchId ? candidates.findIndex(b => b.id === defaultBatchId) : -1;
+  const choice = prompt(`Where should "${job.title}" go?\n\n0. Leave in Unbatched\n${lines}\n\nEnter a number:`, defIdx >= 0 ? String(defIdx + 1) : "0");
+  if (choice === null) return null;
+  const idx = parseInt(choice, 10);
+  if (!idx || isNaN(idx) || idx < 1 || idx > candidates.length) return null;
+  const target = candidates[idx - 1];
+  if (!target.job_ids.includes(job.id)) target.job_ids.push(job.id);
+  job.status = "batched"; job.batch_id = target.id; saveState();
+  return target;
+}
+
+document.getElementById("q_add_btn").addEventListener("click", () => openIntake({ from: "queue" }));
 document.getElementById("q_intake_back_btn").addEventListener("click", backToQueueFromIntake);
 document.getElementById("q_to_batches_btn").addEventListener("click", () => showTab("batches"));
 
@@ -3237,23 +3312,33 @@ function buildJobFromIntake({ urlOnly = false } = {}) {
 document.getElementById("j_save_btn").addEventListener("click", () => {
   const job = buildJobFromIntake();
   if (!job) return;
-  const msg = job.screening.qualified
-    ? "✓ Qualified — saved to queue"
-    : (job.screening.reasons_fail[0]?.includes("no JD") ? "Saved (no JD yet — re-screen after parsing)" : "✗ Rejected — saved to queue");
-  showToast(msg, 3000);
+  const base = job.screening.qualified
+    ? "✓ Qualified"
+    : (job.screening.reasons_fail[0]?.includes("no JD") ? "Saved (no JD yet — re-screen after parsing)" : "✗ Rejected");
   document.getElementById("j_clear_btn").click();
-  backToQueueFromIntake();
-  // Screening triggers an AI fit pass (persona/culture judgment, all sets) when there's JD text
-  if ((job.raw_text || "").trim().length >= 50) {
-    runAiFitSingle(job, () => renderQueue());
+  const ctx = intakeCtx; intakeCtx = { from: "queue" };
+  // Screening triggers an AI fit pass (persona/culture judgment) when there's JD text
+  if ((job.raw_text || "").trim().length >= 50) runAiFitSingle(job, () => { if (currentView === "queue") renderQueue(); });
+  if (ctx.from === "batch" || ctx.from === "batches") {
+    const target = chooseDestinationForJob(job, ctx.batchId);
+    if (target) { showToast(`${base} — added to ${target.id}`, 3000); showBatchDetail(target.id); return; }
+    showToast(`${base} — left in Unbatched`, 3000); showTab("queue"); return;
   }
+  showToast(`${base} — in Unbatched`, 3000);
+  backToQueueFromIntake();
 });
 
 document.getElementById("j_quicksave_btn").addEventListener("click", () => {
   const job = buildJobFromIntake({ urlOnly: true });
   if (!job) return;
-  showToast("Link saved. Come back to paste JD text later.", 3000);
   document.getElementById("j_clear_btn").click();
+  const ctx = intakeCtx; intakeCtx = { from: "queue" };
+  if (ctx.from === "batch" || ctx.from === "batches") {
+    const target = chooseDestinationForJob(job, ctx.batchId);
+    if (target) { showToast(`Link saved — added to ${target.id}`, 3000); showBatchDetail(target.id); return; }
+    showToast("Link saved — in Unbatched", 3000); showTab("queue"); return;
+  }
+  showToast("Link saved. Come back to paste JD text later.", 3000);
   backToQueueFromIntake();
 });
 
@@ -3447,7 +3532,7 @@ async function runAiFitSingle(job, rerender) {
 // Confirm before spending tokens on a bulk run (n jobs × every criteria set).
 function confirmAiCost(n) {
   if (!n) return false;
-  const sets = (state.criteria_sets || []).length || 1;
+  const sets = enabledCriteriaSets().length || 1;
   const calls = n * sets;
   return confirm(`Also run AI fit on ${n} job(s) × ${sets} criteria set(s) = ${calls} Claude call(s) (~$${(calls * 0.005).toFixed(3)})?\n\n(The instant keyword score is already updated — this adds Claude's persona/culture judgment for each set.)`);
 }
@@ -3506,8 +3591,8 @@ function renderQueue() {
   // Populate the active criteria-set selector
   const csel = document.getElementById("q_criteria_select");
   if (csel) {
-    csel.innerHTML = (state.criteria_sets || []).map(cs => `<option value="${escapeHtml(cs.id)}">${escapeHtml(cs.name)}</option>`).join("");
-    csel.value = state.active_criteria_id;
+    csel.innerHTML = enabledCriteriaSets().map(cs => `<option value="${escapeHtml(cs.id)}">${escapeHtml(cs.name)}</option>`).join("");
+    csel.value = activeCriteria()?.id || "";
   }
   const root = document.getElementById("q_list");
   const showRejected = document.getElementById("q_show_rejected").checked;
@@ -4107,10 +4192,28 @@ function renderBatches() {
     document.getElementById("b_unbatched_card").addEventListener("click", () => showTab("queue"));
   }
 
+  // Toolbar — add-batch, add-job, criteria-set filter. Use .onclick (idempotent across re-renders).
+  const addBatchBtn = document.getElementById("b_add_batch_btn");
+  if (addBatchBtn) addBatchBtn.onclick = () => { const nb = createEmptyBatch(); showToast(`Created ${nb.id}`); showBatchDetail(nb.id); };
+  const addJobBtn = document.getElementById("b_add_job_list_btn");
+  if (addJobBtn) addJobBtn.onclick = () => openIntake({ from: "batches" });
+  const filterSel = document.getElementById("b_filter_criteria");
+  if (filterSel) {
+    filterSel.innerHTML = [`<option value="">All criteria sets</option>`]
+      .concat((state.criteria_sets || []).map(cs => `<option value="${escapeHtml(cs.id)}">${escapeHtml(cs.name)}${csEnabled(cs) ? "" : " (off)"}</option>`)).join("");
+    filterSel.value = batchListFilter;
+    filterSel.onchange = () => { batchListFilter = filterSel.value; renderBatches(); };
+  }
+
   const list = document.getElementById("b_list");
   list.innerHTML = "";
-  document.getElementById("b_empty").style.display = state.batches.length ? "none" : "block";
-  state.batches.slice().reverse().forEach(b => {
+  const shown = state.batches.filter(b => !batchListFilter || b.criteria_id === batchListFilter);
+  const emptyEl = document.getElementById("b_empty");
+  emptyEl.style.display = shown.length ? "none" : "block";
+  if (!shown.length) emptyEl.innerHTML = (batchListFilter && state.batches.length)
+    ? "No batches match this filter."
+    : "No batches yet. Tap <b>+ Batch</b>, or open <b>Unbatched</b> above and create one from selected jobs.";
+  shown.slice().reverse().forEach(b => {
     const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
     const submitted = jobs.filter(j => ["submitted","phonescreen","onsite","offer","rejected_by_co"].includes(j.status)).length;
     const screens = jobs.filter(j => ["phonescreen","onsite","offer"].includes(j.status)).length;
@@ -4214,6 +4317,11 @@ function renderBatches() {
   }));
 }
 
+// Batch-detail settings header starts collapsed (compact); persists across re-renders this session.
+let batchHeaderCollapsed = true;
+// Batches-list criteria-set filter ("" = all). Persists across re-renders this session.
+let batchListFilter = "";
+
 function showBatchDetail(batchId) {
   if (!setHash("#/batch/" + encodeURIComponent(batchId))) applyBatchDetail(batchId);
 }
@@ -4226,31 +4334,50 @@ function applyBatchDetail(batchId) {
   const root = document.getElementById("b_detail");
   const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
   const resumeOptions = state.resumes.versions.map(v => `<option value="${v.id}" ${b.resume_version_id === v.id ? "selected" : ""}>${escapeHtml(v.id)} — ${escapeHtml(v.notes || "")}</option>`).join("");
-  const critOptions = (state.criteria_sets || []).map(cs => `<option value="${escapeHtml(cs.id)}" ${b.criteria_id === cs.id ? "selected" : ""}>${escapeHtml(cs.name)}</option>`).join("");
+  // Criteria options: enabled sets, plus the batch's current set even if it's been disabled (so it isn't lost).
+  const activeCrit = criteriaById(b.criteria_id);
+  const critSets = enabledCriteriaSets().slice();
+  if (activeCrit && !csEnabled(activeCrit) && !critSets.some(c => c.id === activeCrit.id)) critSets.unshift(activeCrit);
+  const critOptions = critSets.map(cs => `<option value="${escapeHtml(cs.id)}" ${b.criteria_id === cs.id ? "selected" : ""}>${escapeHtml(cs.name)}${csEnabled(cs) ? "" : " (off)"}</option>`).join("");
+  const critName = activeCrit ? activeCrit.name : "not set";
+  const resumeName = b.resume_version_id || "not set";
   const BATCH_STATUSES = ["draft", "analyzed", "submitted", "archived"];
   const statusList = BATCH_STATUSES.includes(b.status) ? BATCH_STATUSES : [b.status, ...BATCH_STATUSES];
   const statusOptions = statusList.map(s => `<option value="${escapeHtml(s)}" ${b.status === s ? "selected" : ""}>${escapeHtml(s)}</option>`).join("");
   root.innerHTML = `
-    <div class="card">
-      <h3>${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></h3>
-      <div class="row" style="align-items:flex-end;gap:10px">
-        <div class="col" style="flex:1 1 auto"><label>Batch status</label>
-          <select id="b_status_sel">${statusOptions}</select>
+    <div class="card" id="b_header_card">
+      <div class="flex-between" style="align-items:flex-start;gap:8px">
+        <div class="grow" style="min-width:0">
+          <h3 style="margin:0">${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></h3>
+          <div id="b_settings_summary" class="muted small" style="margin-top:4px;display:${batchHeaderCollapsed ? "block" : "none"}">${escapeHtml(critName)} · resume ${escapeHtml(resumeName)} · ${jobs.length} job(s)</div>
         </div>
+        <button class="icon-btn" id="b_settings_toggle" aria-expanded="${!batchHeaderCollapsed}" title="Show/hide batch settings" aria-label="Show/hide batch settings">
+          <svg id="b_settings_chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s;transform:rotate(${batchHeaderCollapsed ? 0 : 180}deg)"><path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </button>
       </div>
-      <div class="row" style="align-items:flex-end;gap:10px;margin-top:8px">
-        <div class="col" style="flex:1 1 auto"><label>Screening criteria set</label>
-          <select id="b_criteria_sel">${critOptions}</select>
+      <div id="b_settings_body" style="display:${batchHeaderCollapsed ? "none" : "block"}">
+        <div class="row" style="align-items:flex-end;gap:10px;margin-top:10px">
+          <div class="col" style="flex:1 1 auto"><label>Batch status</label>
+            <select id="b_status_sel">${statusOptions}</select>
+          </div>
         </div>
-      </div>
-      <div class="row" style="align-items:flex-end;gap:10px;margin-top:8px">
-        <div class="col" style="flex:1 1 auto"><label>Resume version</label>
-          <select id="b_resume_sel"><option value="">— pick a resume —</option>${resumeOptions}</select>
+        <div class="row" style="align-items:flex-end;gap:10px;margin-top:8px">
+          <div class="col" style="flex:1 1 auto"><label>Screening criteria set</label>
+            <select id="b_criteria_sel">${critOptions}</select>
+          </div>
+        </div>
+        <div class="row" style="align-items:flex-end;gap:10px;margin-top:8px">
+          <div class="col" style="flex:1 1 auto"><label>Resume version</label>
+            <select id="b_resume_sel"><option value="">— pick a resume —</option>${resumeOptions}</select>
+          </div>
         </div>
       </div>
       <div class="row" style="gap:4px;margin-top:10px;margin-left:-6px;flex-wrap:wrap">
-        <button class="icon-btn" id="b_ats_btn" title="Run ATS check" aria-label="Run ATS check">
+        <button class="icon-btn" id="b_ats_btn" title="Run ATS check (deterministic keyword match)" aria-label="Run ATS check">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+        <button class="icon-btn" id="b_ai_ats_btn" title="AI ATS — whole-batch resume-fit summary via Claude (~$0.02)" aria-label="AI ATS check" ${b.is_analyzing ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
         </button>
         <button class="icon-btn" id="b_analyzer_btn" title="Analyze batch (generate Q&A)" aria-label="Analyze batch" ${b.is_analyzing ? "disabled" : ""}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.091 3.091zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>
@@ -4267,14 +4394,28 @@ function applyBatchDetail(batchId) {
       </div>
     </div>
 
-    <div class="card" id="b_analysis_card" style="display:${b.analysis ? "block" : "none"}">
-      <h3>Batch analyzer output</h3>
-      <div id="b_analysis_content"></div>
-    </div>
-
-    <div class="card">
-      <h3>Jobs in this batch (${jobs.length})</h3>
-      <div id="b_jobs_list"></div>
+    <div class="subtabs" data-subtab-group="batch">
+      <div class="subtab-bar">
+        <button class="subtab-head" data-subtab="jobs">Jobs</button>
+        <button class="subtab-head" data-subtab="analysis">AI Analysis</button>
+      </div>
+      <div class="subtab-panels">
+        <div class="subtab-panel" data-subtab="jobs">
+          <div class="card">
+            <div class="flex-between" style="margin-bottom:8px">
+              <h3 style="margin:0">Jobs in this batch (${jobs.length})</h3>
+              <button class="btn ghost" id="b_add_job_btn" style="flex:0 0 auto">+ Add job</button>
+            </div>
+            <div id="b_jobs_list"></div>
+          </div>
+        </div>
+        <div class="subtab-panel" data-subtab="analysis">
+          <div class="card" id="b_analysis_card">
+            <h3>AI analysis</h3>
+            <div id="b_analysis_content"></div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 
@@ -4310,9 +4451,18 @@ function applyBatchDetail(batchId) {
     renderBatchJobs(b);
   });
   document.getElementById("b_ats_btn").addEventListener("click", () => runATSCheck(b));
+  document.getElementById("b_ai_ats_btn").addEventListener("click", () => runAiAtsCheck(b));
   document.getElementById("b_analyzer_btn").addEventListener("click", () => runBatchAnalyzer(b));
   document.getElementById("b_resume_imp_btn").addEventListener("click", () => runResumeImprovement(b));
   document.getElementById("b_help_btn").addEventListener("click", () => showBatchHelpModal());
+  document.getElementById("b_add_job_btn").addEventListener("click", () => openIntake({ from: "batch", batchId: b.id }));
+  document.getElementById("b_settings_toggle").addEventListener("click", () => {
+    batchHeaderCollapsed = !batchHeaderCollapsed;
+    document.getElementById("b_settings_body").style.display = batchHeaderCollapsed ? "none" : "block";
+    document.getElementById("b_settings_summary").style.display = batchHeaderCollapsed ? "block" : "none";
+    document.getElementById("b_settings_chevron").style.transform = `rotate(${batchHeaderCollapsed ? 0 : 180}deg)`;
+    document.getElementById("b_settings_toggle").setAttribute("aria-expanded", String(!batchHeaderCollapsed));
+  });
   document.getElementById("b_mark_submitted").addEventListener("click", () => {
     if (!confirm(`Mark all ${jobs.length} jobs in ${b.id} as submitted? (You can update individual outcomes after.)`)) return;
     const now = nowISO();
@@ -4323,6 +4473,7 @@ function applyBatchDetail(batchId) {
 
   renderBatchAnalysis(b);
   renderBatchJobs(b);
+  initSubtabs(root.querySelector('.subtabs'));
 }
 
 document.getElementById("b_back_btn").addEventListener("click", () => showTab("batches"));
@@ -4330,13 +4481,17 @@ document.getElementById("b_back_btn").addEventListener("click", () => showTab("b
 function renderBatchAnalysis(b) {
   const card = document.getElementById("b_analysis_card");
   const content = document.getElementById("b_analysis_content");
-  if (!b.analysis && !b.ats && !b.resume_improvement) { card.style.display = "none"; return; }
+  if (!card || !content) return;
   card.style.display = "block";
+  if (!b.analysis && !b.ats && !b.resume_improvement && !b.ai_ats) {
+    content.innerHTML = `<div class="muted small">No analysis yet. Use the buttons in the header above — <b>Analyze</b> drafts per-job Q&A + batch themes, <b>ATS</b> scores keyword fit, <b>AI ATS</b> gives a whole-batch resume-fit summary, <b>Improve</b> suggests one resume edit.</div>`;
+    return;
+  }
   let html = "";
 
   if (b.analysis) {
     const a = b.analysis;
-    html += `<div class="small muted" style="margin-bottom:10px">Per-job Q&A is on each job card below — tap a job to view & copy answers.</div>`;
+    html += `<div class="small muted" style="margin-bottom:10px">Per-job Q&A is on the <b>Jobs</b> tab — tap a job to view & copy answers.</div>`;
     if (a.top_requirements?.length) {
       html += `<h4 style="margin:10px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top requirements across batch</h4><ol style="padding-left:20px;margin:0">`;
       a.top_requirements.forEach(r => { html += `<li style="margin:4px 0"><b>${escapeHtml(r.requirement)}</b> <span class="muted small">— ${escapeHtml(r.impact || "?")}, ${r.count || "?"} JD(s)</span></li>`; });
@@ -4389,6 +4544,19 @@ function renderBatchAnalysis(b) {
       b.ats.agg_missing.slice(0, 15).forEach(([t, c]) => { html += `<span class="chip">${escapeHtml(t)} <span class="muted">×${c}</span></span>`; });
       html += `</div>`;
     }
+  }
+
+  if (b.ai_ats) {
+    if (b.analysis || b.resume_improvement || b.ats) html += `<div class="divider" style="margin:14px 0"></div>`;
+    const a = b.ai_ats;
+    html += `<h4 style="margin:0 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">AI ATS — whole-batch resume fit${a.resume_version_id ? " vs " + escapeHtml(a.resume_version_id) : ""}</h4>`;
+    html += `<div style="background:var(--soft);padding:12px;border-radius:10px">`;
+    if (a.overall_fit != null) html += `<div style="font-weight:700;margin-bottom:6px">Overall fit: <span style="color:var(--accent)">${escapeHtml(String(a.overall_fit))}/100</span></div>`;
+    if (a.summary) html += `<div class="small" style="margin-bottom:8px;white-space:pre-wrap;word-break:break-word">${escapeHtml(a.summary)}</div>`;
+    if (a.strengths?.length) html += `<div class="small" style="margin-bottom:6px"><b style="color:var(--good)">Strengths:</b> ${a.strengths.map(escapeHtml).join(", ")}</div>`;
+    if (a.common_gaps?.length) html += `<div class="small"><b style="color:var(--bad)">Common gaps:</b><ul style="margin:4px 0;padding-left:20px">${a.common_gaps.map(g => `<li style="margin:2px 0">${escapeHtml(g)}</li>`).join("")}</ul></div>`;
+    html += `<div class="muted small" style="margin-top:6px">Generated ${escapeHtml(a.generated_at?.slice(0,10) || "")}</div>`;
+    html += `</div>`;
   }
 
   content.innerHTML = html;
@@ -4533,7 +4701,64 @@ function runATSCheck(b) {
   b.ats = { resume_version_id: b.resume_version_id, per_job: perJob, agg_missing: sortedMissing, run_at: nowISO() };
   saveState();
   renderBatchAnalysis(b);
+  setSubtab("batch", "analysis");
   showToast(`ATS check complete. Average score: ${Math.round(perJob.reduce((s, p) => s + p.score, 0) / (perJob.length || 1))}/100`);
+}
+
+// On-demand whole-batch AI ATS — ONE Claude call rating the chosen resume against all JDs in the
+// batch (deterministic ATS above stays the default). Result lives in b.ai_ats, shown in AI Analysis.
+async function runAiAtsCheck(b) {
+  if (!b.resume_version_id) { alert("Pick a resume version first — open the batch settings (chevron) and choose one."); return; }
+  const resume = state.resumes.versions.find(v => v.id === b.resume_version_id);
+  if (!resume) { alert("Resume not found."); return; }
+  const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
+  if (!jobs.length) { alert("No jobs in this batch."); return; }
+  if (!confirm(`Run AI ATS on this batch?\n\nOne Claude call assessing your resume "${b.resume_version_id}" against all ${jobs.length} JD(s) in the batch (~$0.02).`)) return;
+  const btn = document.getElementById("b_ai_ats_btn");
+  if (btn) btn.disabled = true;
+  try {
+    const jdBlock = jobs.map(j => `--- ${j.title} @ ${j.company || "?"} ---
+Tech: ${(j.tech_stack || []).join(", ")}
+Requirements: ${(j.requirements || []).slice(0, 10).join("; ")}`).join("\n\n").slice(0, 8000);
+    const prompt = `You are an experienced technical recruiter using an ATS, evaluating ONE resume against a batch of ${jobs.length} senior frontend job descriptions.
+
+RESUME:
+"""
+${(resume.content || "").slice(0, 6000)}
+"""
+
+JOB DESCRIPTIONS (${jobs.length}):
+${jdBlock}
+
+Assess how well this single resume fits the batch as a whole (not per job). Return ONLY valid JSON, no prose:
+{
+  "overall_fit": <int 0-100>,
+  "summary": "2-4 sentence assessment of overall fit across these roles",
+  "strengths": ["short phrases the resume already covers well for these JDs"],
+  "common_gaps": ["skills/keywords/experience these JDs want that are weak or missing from the resume — most impactful first"]
+}`;
+    const result = await askClaude(prompt, [], 0.02, "haiku", "AI ATS (batch)", 1500);
+    const text = typeof result === "string" ? result : (result?.content || result?.text || "");
+    const m = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error("No JSON in response");
+    const parsed = JSON.parse(m[0]);
+    b.ai_ats = {
+      overall_fit: typeof parsed.overall_fit === "number" ? parsed.overall_fit : null,
+      summary: parsed.summary || "",
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+      common_gaps: Array.isArray(parsed.common_gaps) ? parsed.common_gaps : [],
+      resume_version_id: b.resume_version_id,
+      generated_at: nowISO()
+    };
+    saveState();
+    renderBatchAnalysis(b);
+    setSubtab("batch", "analysis");
+    showToast("AI ATS complete");
+  } catch (e) {
+    alert("AI ATS failed: " + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ============================================================================
@@ -4738,7 +4963,8 @@ Return ONLY valid JSON:
     };
     saveState();
     showBatchDetail(b.id);
-    showToast("Suggestion ready — see the batch page");
+    setSubtab("batch", "analysis");
+    showToast("Suggestion ready — see AI Analysis");
   } catch (e) {
     alert("Resume improvement failed: " + e.message);
   } finally {
