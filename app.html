@@ -363,6 +363,32 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
   .fab { right: max(calc(env(safe-area-inset-right) + 16px), calc(50vw - 360px + 16px)); }
 }
 
+/* ---- Reusable sub-tabs (tappable headers + swipe). Used by Job detail and Resumes. ---- */
+.subtab-bar {
+  display: flex; gap: 2px;
+  position: sticky; top: 0; z-index: 6;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  margin: 0 0 14px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.subtab-bar::-webkit-scrollbar { display: none; }
+.subtab-head {
+  flex: 1 0 auto; white-space: nowrap;
+  background: transparent; border: 0; cursor: pointer; font: inherit;
+  font-weight: 600; font-size: 14px; color: var(--muted);
+  padding: 11px 14px; border-bottom: 2px solid transparent;
+  transition: color .12s, border-color .12s;
+}
+@media (hover: hover) { .subtab-head:hover { color: var(--fg); } }
+.subtab-head.active { color: var(--accent); border-bottom-color: var(--accent); }
+.subtab-panel { display: none; }
+.subtab-panel.active { display: block; animation: subtabIn .18s ease; }
+@keyframes subtabIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+.subtab-panel.from-left.active { animation-name: subtabInLeft; }
+@keyframes subtabInLeft { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
 /* ---- Comment bar (pinned above bottom nav) + slide-up drawer ---- */
 #comment_bar {
   flex-shrink: 0;
@@ -840,19 +866,31 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   </div>
 </section>
 
-<!-- ========== RESUMES ========== -->
+<!-- ========== RESUMES (Criteria · Resume · Templates sub-tabs) ========== -->
 <section class="view" data-view="resumes">
-  <h2>Resume versions</h2>
-  <div class="notice">Each batch can pick a resume version for ATS scoring + one incremental improvement.</div>
-  <button class="fab" id="r_new_btn" title="New resume version" aria-label="New resume version">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-  </button>
-  <div class="card">
-    <h3 style="margin:0 0 10px">Versions</h3>
-    <div id="r_list"></div>
-  </div>
+  <div class="subtabs" data-subtab-group="resumes">
+    <div class="subtab-bar">
+      <button class="subtab-head" data-subtab="criteria">Criteria</button>
+      <button class="subtab-head" data-subtab="resume">Resume</button>
+      <button class="subtab-head" data-subtab="templates">Templates</button>
+    </div>
+    <div class="subtab-panels">
 
-  <div class="card" id="r_edit_card" style="display:none">
+    <!-- Criteria sub-tab — populated at init by relocating the criteria cards here -->
+    <div class="subtab-panel" data-subtab="criteria" id="rt_panel_criteria"></div>
+
+    <!-- Resume versions sub-tab -->
+    <div class="subtab-panel" data-subtab="resume" id="rt_panel_resume">
+      <div class="notice">Each batch can pick a resume version for ATS scoring + one incremental improvement.</div>
+      <button class="fab" id="r_new_btn" title="New resume version" aria-label="New resume version">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div class="card">
+        <h3 style="margin:0 0 10px">Versions</h3>
+        <div id="r_list"></div>
+      </div>
+
+      <div class="card" id="r_edit_card" style="display:none">
     <h3 id="r_edit_title">Edit resume</h3>
     <div class="row"><div class="col">
       <label>Version notes — what changed vs the prior version</label>
@@ -880,10 +918,17 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
       <button class="btn" id="r_save_btn">Save</button>
       <button class="btn ghost" id="r_cancel_btn">Cancel</button>
     </div>
-  </div>
+      </div>
+    </div><!-- /resume panel -->
+
+    <!-- Templates sub-tab — populated at init by relocating the template cards here -->
+    <div class="subtab-panel" data-subtab="templates" id="rt_panel_templates"></div>
+
+    </div><!-- /.subtab-panels -->
+  </div><!-- /.subtabs -->
 </section>
 
-<!-- ========== SETTINGS (Profile + Criteria + Sync + API + Backup) ========== -->
+<!-- ========== SETTINGS (Profile + Sync + API + Backup) ========== -->
 <section class="view" data-view="settings">
   <div id="settings_menu_view">
     <button class="btn ghost" id="settings_exit_btn" style="margin-bottom:14px">← Back</button>
@@ -1861,13 +1906,80 @@ window.addEventListener("hashchange", route);
 // If the URL is already correct (e.g. an in-place refresh), re-apply directly without a history entry.
 function showTab(name) { if (!setHash(viewHash(name))) applyTab(name); }
 
+// ============================================================================
+// Reusable sub-tabs — tappable headers + axis-locked horizontal swipe.
+// Markup: <div class="subtabs" data-subtab-group="X"><div class="subtab-bar">
+//   <button class="subtab-head" data-subtab="k">..</button>…</div>
+//   <div class="subtab-panels"><div class="subtab-panel" data-subtab="k">..</div>…</div></div>
+// The active sub-tab per group persists in subtabState so re-renders stay put.
+// ============================================================================
+const subtabState = {};
+
+function setSubtab(group, key) { const root = document.querySelector(`.subtabs[data-subtab-group="${group}"]`); if (root && root._showSubtab) root._showSubtab(key); }
+
+function initSubtabs(rootEl) {
+  if (!rootEl) return;
+  const group = rootEl.dataset.subtabGroup || "default";
+  const heads = [...rootEl.querySelectorAll(".subtab-head")];
+  const panels = [...rootEl.querySelectorAll(".subtab-panel")];
+  if (!heads.length) return;
+  const keys = heads.map(h => h.dataset.subtab);
+
+  function show(key, dir) {
+    if (!keys.includes(key)) key = keys[0];
+    subtabState[group] = key;
+    heads.forEach(h => h.classList.toggle("active", h.dataset.subtab === key));
+    panels.forEach(p => {
+      const on = p.dataset.subtab === key;
+      p.classList.toggle("from-left", on && dir === -1);
+      p.classList.toggle("active", on);
+    });
+    const ah = heads.find(h => h.dataset.subtab === key);
+    if (ah) { try { ah.scrollIntoView({ inline: "center", block: "nearest" }); } catch (e) {} }
+  }
+  rootEl._showSubtab = show;
+
+  heads.forEach(h => h.addEventListener("click", () => show(h.dataset.subtab)));
+
+  // Swipe between sub-tabs on the panels area. Only acts on a clearly horizontal gesture,
+  // so vertical scrolling of long job content is never hijacked.
+  const wrap = rootEl.querySelector(".subtab-panels");
+  if (wrap) {
+    let x0 = null, y0 = null;
+    wrap.addEventListener("touchstart", e => {
+      if (e.touches.length !== 1) { x0 = null; return; }
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    }, { passive: true });
+    wrap.addEventListener("touchend", e => {
+      if (x0 == null) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - x0, dy = t.clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.6) return; // not a horizontal swipe
+      const idx = keys.indexOf(subtabState[group] || keys[0]);
+      const next = dx < 0 ? idx + 1 : idx - 1;
+      if (next < 0 || next >= keys.length) return;
+      show(keys[next], dx < 0 ? 1 : -1);
+    }, { passive: true });
+  }
+
+  // Restore remembered sub-tab (or default to the first / leftmost).
+  show(keys.includes(subtabState[group]) ? subtabState[group] : keys[0]);
+}
+
+// Move the criteria + template cards (authored inside the Settings section for convenience)
+// into the Resumes page sub-tab panels. Done once at startup. Stripping data-settings-section
+// detaches them from the Settings show/hide logic so they're controlled only by the sub-tabs.
+function relocateResumeSubtabs() {
+  const critPanel = document.getElementById("rt_panel_criteria");
+  const tplPanel = document.getElementById("rt_panel_templates");
+  if (critPanel) document.querySelectorAll('[data-settings-section="criteria"]').forEach(el => { el.removeAttribute("data-settings-section"); critPanel.appendChild(el); });
+  if (tplPanel) document.querySelectorAll('[data-settings-section="templates"]').forEach(el => { el.removeAttribute("data-settings-section"); tplPanel.appendChild(el); });
+}
+
 const SETTINGS_SECTIONS = [
   { key: "profile",  label: "Profile",            sub: "Name, contact, target titles, bios",
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>` },
-  { key: "criteria", label: "Screening criteria", sub: "Must-haves, dealbreakers, target companies",
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.971zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 01-2.031.352 5.989 5.989 0 01-2.031-.352c-.483-.174-.711-.703-.59-1.202L5.25 4.971z"/></svg>` },
-  { key: "templates", label: "Resume templates",  sub: "Output formats for resume export",
-    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>` },
   { key: "claude",   label: "Claude access",      sub: "API key, model selection",
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>` },
   { key: "usage",    label: "Usage & budget",     sub: "Per-call cost tracking, monthly budget",
@@ -3613,6 +3725,7 @@ function applyJobDetail(jobId) {
   document.getElementById("q_detail_view").style.display = "block";
   const backBtn = document.getElementById("q_back_btn");
   backBtn.textContent = jobDetailReturnCtx.type === "batch" ? "← Back to batch" : "← Back to Unbatched";
+  subtabState["job"] = "overview";   // open a freshly-selected job on Overview (re-renders keep the current sub-tab)
   renderJobDetail(j, false);
   window.scrollTo(0, 0);
 }
@@ -3850,53 +3963,73 @@ Return JSON only.`;
       </div>
     </div>
 
-    <div class="card">
-      <h3>Key fields</h3>
-      <table>
-        <tbody>
-          <tr><td class="muted" style="width:35%">Salary</td><td>${escapeHtml(salary)}</td></tr>
-          <tr><td class="muted">Locations</td><td>${escapeHtml((j.locations||[]).join(", ") || "—")}</td></tr>
-          <tr><td class="muted">Work arrangement</td><td>${escapeHtml(j.work_arrangement || "—")}</td></tr>
-          <tr><td class="muted">Job type</td><td>${escapeHtml(j.job_type || "—")}</td></tr>
-          <tr><td class="muted">Posted</td><td>${escapeHtml(j.posted_date || "—")}</td></tr>
-          <tr><td class="muted">Reference ID</td><td>${escapeHtml(j.reference_id || "—")}</td></tr>
-          <tr><td class="muted">Frontend split</td><td>${escapeHtml(fePct)}</td></tr>
-          <tr><td class="muted">Source link</td><td>${j.url ? `<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener" title="${escapeHtml(j.url)}" style="display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom">${escapeHtml(shortUrl(j.url))} <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg></a>` : "—"}</td></tr>
-        </tbody>
-      </table>
-    </div>
+    <div class="subtabs" data-subtab-group="job">
+      <div class="subtab-bar">
+        <button class="subtab-head" data-subtab="overview">Overview</button>
+        <button class="subtab-head" data-subtab="screening">Screening</button>
+        <button class="subtab-head" data-subtab="qa">App Q&amp;A</button>
+        <button class="subtab-head" data-subtab="raw">Raw JD</button>
+      </div>
+      <div class="subtab-panels">
 
-    ${stackChips ? `<div class="card"><h3>Tech stack</h3><div class="chips">${stackChips}</div></div>` : ""}
+      <div class="subtab-panel" data-subtab="overview">
+        <div class="card">
+          <h3>Key fields</h3>
+          <table>
+            <tbody>
+              <tr><td class="muted" style="width:35%">Salary</td><td>${escapeHtml(salary)}</td></tr>
+              <tr><td class="muted">Locations</td><td>${escapeHtml((j.locations||[]).join(", ") || "—")}</td></tr>
+              <tr><td class="muted">Work arrangement</td><td>${escapeHtml(j.work_arrangement || "—")}</td></tr>
+              <tr><td class="muted">Job type</td><td>${escapeHtml(j.job_type || "—")}</td></tr>
+              <tr><td class="muted">Posted</td><td>${escapeHtml(j.posted_date || "—")}</td></tr>
+              <tr><td class="muted">Reference ID</td><td>${escapeHtml(j.reference_id || "—")}</td></tr>
+              <tr><td class="muted">Frontend split</td><td>${escapeHtml(fePct)}</td></tr>
+              <tr><td class="muted">Source link</td><td>${j.url ? `<a href="${escapeHtml(j.url)}" target="_blank" rel="noopener" title="${escapeHtml(j.url)}" style="display:inline-flex;align-items:center;gap:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom">${escapeHtml(shortUrl(j.url))} <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg></a>` : "—"}</td></tr>
+            </tbody>
+          </table>
+        </div>
 
-    ${reqs.length ? `<div class="card"><h3>Requirements (${reqs.length})</h3><ul style="margin:0;padding-left:20px">${reqs.map(r => `<li style="margin:4px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
+        ${stackChips ? `<div class="card"><h3>Tech stack</h3><div class="chips">${stackChips}</div></div>` : ""}
 
-    ${j.interview_process ? `<div class="card"><h3>Interview process</h3><div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(j.interview_process)}</div></div>` : ""}
+        ${reqs.length ? `<div class="card"><h3>Requirements (${reqs.length})</h3><ul style="margin:0;padding-left:20px">${reqs.map(r => `<li style="margin:4px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
 
-    <div class="card">
-      <h3>Screening result</h3>
-      ${fitSummaryHTML}
-      ${(screening.reasons_pass || []).length ? `<div style="margin-bottom:6px"><b style="color:var(--good)">Pass:</b><ul style="margin:4px 0;padding-left:20px">${screening.reasons_pass.map(r => `<li style="margin:2px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
-      ${(screening.reasons_fail || []).length ? `<div><b style="color:var(--bad)">Fail:</b><ul style="margin:4px 0;padding-left:20px">${screening.reasons_fail.map(r => `<li style="margin:2px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
-      ${(screening.reasons_pass || []).length === 0 && (screening.reasons_fail || []).length === 0 ? `<div class="muted small">No screening run yet. Click Re-screen.</div>` : ""}
-    </div>
+        ${j.interview_process ? `<div class="card"><h3>Interview process</h3><div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(j.interview_process)}</div></div>` : ""}
 
-    ${aiFitCardHTML(j)}
+        ${j.notes ? `<div class="card"><h3>Notes</h3><div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(j.notes)}</div></div>` : ""}
 
-    ${renderJobQAHTML(j)}
+        ${renderFeBeBreakdownHTML(j.raw_text, { job: j, applyTo: "job" })}
+      </div>
 
-    ${j.notes ? `<div class="card"><h3>Notes</h3><div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(j.notes)}</div></div>` : ""}
+      <div class="subtab-panel" data-subtab="screening">
+        <div class="card">
+          <h3>Screening result</h3>
+          ${fitSummaryHTML}
+          ${(screening.reasons_pass || []).length ? `<div style="margin-bottom:6px"><b style="color:var(--good)">Pass:</b><ul style="margin:4px 0;padding-left:20px">${screening.reasons_pass.map(r => `<li style="margin:2px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
+          ${(screening.reasons_fail || []).length ? `<div><b style="color:var(--bad)">Fail:</b><ul style="margin:4px 0;padding-left:20px">${screening.reasons_fail.map(r => `<li style="margin:2px 0">${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
+          ${(screening.reasons_pass || []).length === 0 && (screening.reasons_fail || []).length === 0 ? `<div class="muted small">No screening run yet. Click Re-screen.</div>` : ""}
+        </div>
 
-    ${renderFeBeBreakdownHTML(j.raw_text, { job: j, applyTo: "job" })}
+        ${aiFitCardHTML(j)}
+      </div>
 
-    <details class="card">
-      <summary class="muted flex-between" style="list-style:none;cursor:pointer">
-        <span>Raw JD text (toggle)</span>
-        <button class="icon-btn" id="d_copy_raw" title="Copy raw JD text" aria-label="Copy raw JD text" onclick="event.stopPropagation();event.preventDefault();">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/></svg>
-        </button>
-      </summary>
-      <pre style="white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-size:12px;background:var(--soft);padding:10px;border-radius:6px;margin-top:6px">${escapeHtml(j.raw_text || "")}</pre>
-    </details>
+      <div class="subtab-panel" data-subtab="qa">
+        ${renderJobQAHTML(j)}
+      </div>
+
+      <div class="subtab-panel" data-subtab="raw">
+        <div class="card">
+          <div class="flex-between" style="margin-bottom:8px">
+            <h3 style="margin:0">Raw JD text</h3>
+            <button class="icon-btn" id="d_copy_raw" title="Copy raw JD text" aria-label="Copy raw JD text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/></svg>
+            </button>
+          </div>
+          ${(j.raw_text || "").trim() ? `<pre style="white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-size:12px;background:var(--soft);padding:10px;border-radius:6px;margin:0">${escapeHtml(j.raw_text || "")}</pre>` : `<div class="muted small">No raw JD text saved. Use the edit (pencil) button above to paste it.</div>`}
+        </div>
+      </div>
+
+      </div><!-- /.subtab-panels -->
+    </div><!-- /.subtabs -->
   `;
   document.getElementById("d_rescreen").addEventListener("click", () => {
     const before = !!j.screening?.qualified;
@@ -3948,6 +4081,7 @@ Return JSON only.`;
     backToQueue();
     showToast("Job deleted");
   });
+  initSubtabs(root.querySelector('.subtabs'));
 }
 
 // ============================================================================
@@ -4649,6 +4783,9 @@ function renderResumes() {
     if (confirm("Delete this resume version?")) { state.resumes.versions = state.resumes.versions.filter(v => v.id !== id); saveState(); renderResumes(); }
   }));
   root.querySelectorAll(".r_gen").forEach(b => b.addEventListener("click", e => showGenerateResumeModal(e.currentTarget.dataset.id)));
+  // Populate the sibling sub-tabs (criteria + templates now live on this page too).
+  if (typeof showCriteriaListView === "function" && document.getElementById("crit_list")) showCriteriaListView();
+  if (typeof renderTemplatesList === "function" && document.getElementById("s_templates_list")) renderTemplatesList();
 }
 // (Top-level Compare card removed — diff now lives inside the edit form below)
 
@@ -4760,7 +4897,7 @@ function showGenerateResumeModal(versionId) {
     document.getElementById("g_preview").innerHTML = `
       <details open>
         <summary class="muted small">Preview (scaled to fit)</summary>
-        <div id="g_preview_wrap" style="overflow:hidden;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff">
+        <div id="g_preview_wrap" style="overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:62vh;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff">
           <iframe id="g_preview_frame" srcdoc="${escapeHtml(injectPrintReset(v.generated_html))}" scrolling="no" style="border:0;display:block;background:#fff"></iframe>
         </div>
       </details>`;
@@ -4854,13 +4991,23 @@ function scaleResumePreview() {
   const frame = document.getElementById("g_preview_frame");
   if (!wrap || !frame) return;
   const DOC_W = 794;   // A4 width @96dpi (px)
-  const DOC_H = 1123;  // A4 height @96dpi (px)
-  const scale = Math.min(1, wrap.clientWidth / DOC_W);
-  frame.style.width = DOC_W + "px";
-  frame.style.height = DOC_H + "px";
-  frame.style.transformOrigin = "top left";
-  frame.style.transform = `scale(${scale})`;
-  wrap.style.height = (DOC_H * scale) + "px";
+  const apply = () => {
+    // Measure the real content height so multi-page resumes aren't clipped, then scale
+    // to the panel width via `zoom` (affects layout, so the wrap can scroll naturally).
+    let contentH = 1123;
+    try {
+      const d = frame.contentDocument || frame.contentWindow?.document;
+      if (d && d.body) contentH = Math.max(d.body.scrollHeight, d.documentElement.scrollHeight, 200);
+    } catch (e) { /* same-origin srcdoc, should not throw */ }
+    const scale = Math.min(1, (wrap.clientWidth || DOC_W) / DOC_W);
+    frame.style.transform = "";
+    frame.style.width = DOC_W + "px";
+    frame.style.height = contentH + "px";
+    frame.style.zoom = scale;
+  };
+  apply();
+  // Content height isn't known until the srcdoc finishes parsing — re-measure on load.
+  frame.addEventListener("load", apply, { once: true });
 }
 
 // CSS that suppresses Safari's print headers/footers (date, URL, page numbers)
@@ -4940,9 +5087,8 @@ function editResume(id) {
 })();
 // Manage-templates link inside the edit form
 document.getElementById("r_manage_templates_link").addEventListener("click", () => {
-  document.getElementById("r_edit_card").style.display = "none";
-  showTab("settings");
-  setTimeout(() => showSettingsSection("templates"), 100);
+  // Templates now live as a sub-tab on this same (Resumes) page.
+  setSubtab("resumes", "templates");
 });
 document.getElementById("r_new_btn").addEventListener("click", () => editResume(null));
 document.getElementById("r_save_btn").addEventListener("click", () => {
@@ -5473,6 +5619,8 @@ function hideLock() {
 // Init
 // ============================================================================
 bindSetupInputs();
+relocateResumeSubtabs();   // move criteria + templates cards into the Resumes sub-tab panels
+initSubtabs(document.querySelector('.subtabs[data-subtab-group="resumes"]'));
 route();   // apply the initial view from location.hash (defaults to #/batches)
 updateCostCounter();
 setSyncIndicator(state.settings?.last_synced_at ? "synced" : "off");
