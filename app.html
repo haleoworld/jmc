@@ -1556,8 +1556,18 @@ function loadState() {
       if (!Array.isArray(s.companies)) s.companies = [];
       if (typeof s.nextCompanyId !== "number") s.nextCompanyId = (s.companies.length || 0) + 1;
       s.companies.forEach(c => { if (!Array.isArray(c.notes)) c.notes = []; if (typeof c.norm !== "string") c.norm = normalizeCompanyName(c.name); });
-      // Configurable interview preset stages (seed new jobs' Interview tab)
-      if (!Array.isArray(s.interview_presets) || !s.interview_presets.length) s.interview_presets = ["Phone screen", "Hiring manager", "Coding", "Final"];
+      // Configurable interview preset stages (objects: name + historical notes + AI summary)
+      if (!Array.isArray(s.interview_presets) || !s.interview_presets.length) {
+        s.interview_presets = ["Phone screen", "Hiring manager", "Coding", "Final"].map(_mkPreset);
+      } else {
+        s.interview_presets = s.interview_presets.map(p => typeof p === "string" ? _mkPreset(p) : {
+          id: p.id || ("ivp_" + Math.random().toString(36).slice(2, 9)),
+          name: p.name || "Stage",
+          notes: Array.isArray(p.notes) ? p.notes : [],
+          ai_summary: typeof p.ai_summary === "string" ? p.ai_summary : "",
+          ai_summary_at: p.ai_summary_at || ""
+        });
+      }
       return s;
     }
   } catch (e) { console.warn("Failed to load state", e); }
@@ -1614,7 +1624,7 @@ function defaultState() {
     },
     comments: { queue: [], batches: [], resumes: [], dashboard: [], settings: [] },
     companies: [],
-    interview_presets: ["Phone screen", "Hiring manager", "Coding", "Final"],
+    interview_presets: ["Phone screen", "Hiring manager", "Coding", "Final"].map(_mkPreset),
     nextJobId: 1,
     nextBatchId: 1,
     nextResumeId: 2,
@@ -2960,9 +2970,42 @@ function renderJobQAHTML(j) {
 // INTERVIEW PREP — per-stage dates, questions, AI answers, review notes
 // ============================================================================
 const INTERVIEW_PRESETS = ["Phone screen", "Hiring manager", "Coding", "Final"];
-// The user-configurable preset list (Setup → Interviews); falls back to the built-in default.
+// A preset stage is an object {id, name, notes[], ai_summary, ai_summary_at} — like a company,
+// it accumulates historical review notes (across jobs) for that stage TYPE + an AI summary.
+function _mkPreset(name) {
+  return { id: "ivp_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: (name || "Stage").trim() || "Stage", notes: [], ai_summary: "", ai_summary_at: "" };
+}
+// The user-configurable preset list (Setup → Interviews). Normalizes string/legacy entries to objects.
 function interviewPresets() {
-  return (Array.isArray(state.interview_presets) && state.interview_presets.length) ? state.interview_presets : INTERVIEW_PRESETS;
+  if (!Array.isArray(state.interview_presets) || !state.interview_presets.length) {
+    state.interview_presets = INTERVIEW_PRESETS.map(_mkPreset);
+  }
+  state.interview_presets = state.interview_presets.map(p => {
+    if (typeof p === "string") return _mkPreset(p);
+    if (!p.id) p.id = "ivp_" + Math.random().toString(36).slice(2, 9);
+    if (!Array.isArray(p.notes)) p.notes = [];
+    if (typeof p.ai_summary !== "string") p.ai_summary = "";
+    if (typeof p.ai_summary_at !== "string") p.ai_summary_at = "";
+    return p;
+  });
+  return state.interview_presets;
+}
+// Find the preset matching a job stage's name (case-insensitive), or null.
+function presetByName(name) {
+  const n = (name || "").trim().toLowerCase();
+  if (!n) return null;
+  return interviewPresets().find(p => (p.name || "").trim().toLowerCase() === n) || null;
+}
+function presetById(id) { return interviewPresets().find(p => p.id === id) || null; }
+// Compact context block (AI summary + recent notes) for a stage type, used in interview Q&A generation.
+function presetContextBlock(stageName, maxNotes = 6) {
+  const p = presetByName(stageName);
+  if (!p) return "";
+  const out = [];
+  if ((p.ai_summary || "").trim()) out.push("Summary: " + p.ai_summary.trim().slice(0, 1000));
+  const notes = (p.notes || []).slice(-maxNotes);
+  if (notes.length) out.push("Notes:\n" + notes.map(n => "- " + n.text).join("\n").slice(0, 1500));
+  return out.length ? `Your accumulated lessons for "${p.name}" rounds (from past interviews):\n` + out.join("\n") : "";
 }
 function newInterviewStage(name) {
   return { id: "ivs_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name || "New round", date: "", questions: [], review: "" };
@@ -2970,7 +3013,7 @@ function newInterviewStage(name) {
 // Seed preset stages the first time the Interview tab is opened (j.interviews === undefined).
 // Once seeded (even to []), it won't reseed — so deletes stick.
 function ensureInterviews(j) {
-  if (j.interviews === undefined) { j.interviews = interviewPresets().map(n => newInterviewStage(n)); saveState(); }
+  if (j.interviews === undefined) { j.interviews = interviewPresets().map(p => newInterviewStage(p.name)); saveState(); }
   if (!Array.isArray(j.interviews)) j.interviews = [];
   return j.interviews;
 }
@@ -3071,7 +3114,7 @@ window.addPresetInterviewStages = function(jobId) {
   const stages = ensureInterviews(j);
   const have = new Set(stages.map(s => s.name.toLowerCase()));
   let added = 0;
-  interviewPresets().forEach(n => { if (!have.has(n.toLowerCase())) { stages.push(newInterviewStage(n)); added++; } });
+  interviewPresets().forEach(p => { if (!have.has(p.name.toLowerCase())) { stages.push(newInterviewStage(p.name)); added++; } });
   saveState(); _ivRerender(j);
   showToast(added ? `Added ${added} preset stage${added === 1 ? "" : "s"}` : "All preset stages already present");
 };
@@ -3135,8 +3178,11 @@ window.copyInterviewAnswer = function(jobId, stageId, qId) {
 window.saveInterviewReview = function(jobId, stageId, value) {
   const j = _ivJob(jobId); const s = j && _ivStage(j, stageId); if (!s) return;
   s.review = value || "";
+  // Roll the review note up along two axes: the EMPLOYER (company) and the STAGE TYPE (preset).
   const co = companyForJob(j);
   if (co) upsertCompanyNote(co, j.id, stageId, s.review, `${j.title || j.id} — ${s.name}`);
+  const preset = presetByName(s.name);
+  if (preset) upsertCompanyNote(preset, j.id, stageId, s.review, `${j.title || j.id} @ ${j.company || "?"}`);
   saveState();   // silent — no re-render (keeps focus)
 };
 
@@ -3162,6 +3208,7 @@ async function _runInterviewAnswers(j, stage, questions) {
   const persona = cs && cs.target_persona ? cs.target_persona : "";
   const bioBlock = candidateBioBlock(1200);
   const coBlock = companyContextBlock(j, 6);
+  const stageBlock = presetContextBlock(stage.name, 6);   // lessons from past interviews of THIS stage type
   // Earlier rounds' Q&A + review notes (context the candidate built up).
   const stages = j.interviews || [];
   const myIdx = stages.findIndex(s => s.id === stage.id);
@@ -3177,7 +3224,7 @@ async function _runInterviewAnswers(j, stage, questions) {
 
 ROLE: ${j.title || "?"} @ ${j.company || "?"}
 INTERVIEW ROUND: ${stage.name}
-${persona ? `What the candidate is looking for (target profile): ${persona}\n` : ""}${bioBlock ? `\nCANDIDATE BACKGROUND:\n${bioBlock}\n` : ""}${coBlock ? `\nCOMPANY CONTEXT (use to tailor "why this company" type answers):\n${coBlock}\n` : ""}${earlier ? `\nEARLIER ROUNDS (build on these, stay consistent):\n${earlier}\n` : ""}${(j.requirements || []).length ? `\nKey role requirements: ${(j.requirements || []).slice(0, 8).join("; ")}\n` : ""}
+${persona ? `What the candidate is looking for (target profile): ${persona}\n` : ""}${bioBlock ? `\nCANDIDATE BACKGROUND:\n${bioBlock}\n` : ""}${coBlock ? `\nCOMPANY CONTEXT (use to tailor "why this company" type answers):\n${coBlock}\n` : ""}${stageBlock ? `\nWHAT TO EXPECT THIS ROUND (lessons from the candidate's past ${stage.name} interviews — use to anticipate and tailor):\n${stageBlock}\n` : ""}${earlier ? `\nEARLIER ROUNDS (build on these, stay consistent):\n${earlier}\n` : ""}${(j.requirements || []).length ? `\nKey role requirements: ${(j.requirements || []).slice(0, 8).join("; ")}\n` : ""}
 QUESTION: ${q.text}
 
 Return ONLY the answer text — no preamble, no quotes.`;
@@ -5821,12 +5868,21 @@ Write a neutral 3-6 sentence summary capturing: what the company does, culture/s
 // ============================================================================
 // INTERVIEW PRESETS sub-tab (Setup) — configurable default stages for new jobs
 // ============================================================================
+let presetDetailId = null;   // when set, the Interviews panel shows that preset's detail
+
 function renderInterviewPresets() {
+  const panel = document.getElementById("rt_panel_interviews");
+  if (!panel) return;
+  if (presetDetailId && presetById(presetDetailId)) renderPresetDetail(presetDetailId);
+  else { presetDetailId = null; renderInterviewPresetsList(); }
+}
+
+function renderInterviewPresetsList() {
   const panel = document.getElementById("rt_panel_interviews");
   if (!panel) return;
   const presets = interviewPresets();
   panel.innerHTML = `
-    <div class="notice">These are the default interview stages seeded into each job's <b>Interview</b> tab (and added by "+ Preset stages" there). Editing them here doesn't change jobs you've already opened.</div>
+    <div class="notice">Default stages seeded into each job's <b>Interview</b> tab. Tap a stage to add notes + an AI summary — that summary becomes extra context when generating interview answers for that stage on any job.</div>
     <button class="fab" id="ivp_new_btn" title="Add a preset stage" aria-label="Add a preset stage">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
@@ -5836,44 +5892,150 @@ function renderInterviewPresets() {
     </div>`;
   const list = panel.querySelector("#ivp_list");
   if (!presets.length) list.innerHTML = `<div class="muted small">No presets. Tap + to add one (e.g. Phone screen).</div>`;
-  presets.forEach((name, i) => {
+  presets.forEach((p, i) => {
+    const nNotes = (p.notes || []).length;
     const item = document.createElement("div");
     item.className = "list-item";
+    item.style.cursor = "pointer";
     item.innerHTML = `
-      <div class="grow"><b>${escapeHtml(name)}</b></div>
-      <div style="display:flex;gap:2px;flex:0 0 auto">
+      <div class="grow">
+        <div><b>${escapeHtml(p.name)}</b></div>
+        <div class="muted small">${nNotes} note${nNotes === 1 ? "" : "s"}${(p.ai_summary || "").trim() ? " · AI summary ✓" : ""}</div>
+      </div>
+      <div style="display:flex;gap:2px;flex:0 0 auto" data-noopen="1">
         <button class="icon-btn small ivp_up" data-i="${i}" title="Move up" aria-label="Move up" ${i === 0 ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg></button>
         <button class="icon-btn small ivp_down" data-i="${i}" title="Move down" aria-label="Move down" ${i === presets.length - 1 ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg></button>
-        <button class="icon-btn small ivp_edit" data-i="${i}" title="Rename" aria-label="Rename">${ICON_PENCIL}</button>
         <button class="icon-btn small danger ivp_del" data-i="${i}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
       </div>`;
+    item.addEventListener("click", e => { if (e.target.closest("[data-noopen]")) return; presetDetailId = p.id; renderPresetDetail(p.id); });
     list.appendChild(item);
   });
   panel.querySelector("#ivp_new_btn").addEventListener("click", () => {
     const name = prompt("New interview stage name:");
     if (!name || !name.trim()) return;
-    state.interview_presets = interviewPresets().slice(); state.interview_presets.push(name.trim());
-    saveState(); renderInterviewPresets();
+    interviewPresets().push(_mkPreset(name));
+    saveState(); renderInterviewPresetsList();
   });
-  list.querySelectorAll(".ivp_edit").forEach(b => b.addEventListener("click", e => {
-    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
-    const nv = prompt("Rename stage:", arr[i]); if (nv === null) return;
-    if (!nv.trim()) arr.splice(i, 1); else arr[i] = nv.trim();
-    state.interview_presets = arr; saveState(); renderInterviewPresets();
-  }));
+  const reorder = (i, dir) => { const arr = interviewPresets(); const ni = i + dir; if (ni < 0 || ni >= arr.length) return; [arr[ni], arr[i]] = [arr[i], arr[ni]]; saveState(); renderInterviewPresetsList(); };
   list.querySelectorAll(".ivp_del").forEach(b => b.addEventListener("click", e => {
-    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
-    if (!confirm(`Delete preset "${arr[i]}"?`)) return;
-    arr.splice(i, 1); state.interview_presets = arr; saveState(); renderInterviewPresets();
+    e.stopPropagation();
+    const i = +e.currentTarget.dataset.i; const arr = interviewPresets();
+    if (!confirm(`Delete preset "${arr[i].name}"? (Its notes/summary are removed; jobs already created keep their stages.)`)) return;
+    arr.splice(i, 1); saveState(); renderInterviewPresetsList();
   }));
-  list.querySelectorAll(".ivp_up").forEach(b => b.addEventListener("click", e => {
-    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
-    if (i <= 0) return; [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]; state.interview_presets = arr; saveState(); renderInterviewPresets();
+  list.querySelectorAll(".ivp_up").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); reorder(+e.currentTarget.dataset.i, -1); }));
+  list.querySelectorAll(".ivp_down").forEach(b => b.addEventListener("click", e => { e.stopPropagation(); reorder(+e.currentTarget.dataset.i, 1); }));
+}
+
+function renderPresetDetail(id) {
+  const panel = document.getElementById("rt_panel_interviews");
+  const p = presetById(id);
+  if (!panel) return;
+  if (!p) { presetDetailId = null; renderInterviewPresetsList(); return; }
+  panel.innerHTML = `
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:10px">
+        <button class="btn ghost" id="ivp_back" style="padding:6px 10px">‹ All stages</button>
+      </div>
+      <label class="small muted" style="display:block;margin-bottom:4px">Stage name</label>
+      <input type="text" id="ivp_name" value="${escapeHtml(p.name)}" style="font-size:16px;font-weight:700">
+    </div>
+
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:8px">
+        <h3 style="margin:0">AI summary</h3>
+        <button class="btn ghost" id="ivp_summary_btn" style="padding:6px 10px">${(p.ai_summary || "").trim() ? "Regenerate" : "Generate"} (~$0.005)</button>
+      </div>
+      ${(p.ai_summary || "").trim()
+        ? `<div style="white-space:pre-wrap;line-height:1.5">${escapeHtml(p.ai_summary)}</div><div class="muted small" style="margin-top:6px">Generated ${escapeHtml((p.ai_summary_at || "").slice(0, 10))} from ${(p.notes || []).length} note(s) · fed into interview-answer generation for this stage</div>`
+        : `<div class="muted small">No summary yet. Add notes below (or record review notes on a job's ${escapeHtml(p.name)} round — they roll up here automatically), then Generate. The summary is used as extra context when generating answers for this stage.</div>`}
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 8px">Notes (${(p.notes || []).length})</h3>
+      <div class="row"><div class="col">
+        <textarea id="ivp_new_note" placeholder="Prep notes, common questions, what to expect in this round — anything. Job review notes for this stage also collect here." style="min-height:60px"></textarea>
+      </div></div>
+      <div class="row" style="margin-top:6px"><button class="btn" id="ivp_add_note">Add note</button></div>
+      <div id="ivp_notes_list" style="margin-top:12px"></div>
+    </div>`;
+
+  panel.querySelector("#ivp_back").addEventListener("click", () => { presetDetailId = null; renderInterviewPresetsList(); });
+  const nameInput = panel.querySelector("#ivp_name");
+  nameInput.addEventListener("change", () => {
+    const nv = nameInput.value.trim();
+    if (!nv) { nameInput.value = p.name; return; }
+    p.name = nv; saveState(); renderPresetDetail(p.id);
+  });
+  panel.querySelector("#ivp_add_note").addEventListener("click", () => {
+    const ta = panel.querySelector("#ivp_new_note");
+    if (!ta.value.trim()) return;
+    addCompanyNote(p, ta.value, "manual");   // generic note helper (preset has same {notes[]} shape)
+    saveState(); renderPresetDetail(p.id);
+  });
+  panel.querySelector("#ivp_summary_btn").addEventListener("click", () => runPresetSummary(p.id));
+  renderPresetNotesList(p);
+}
+
+function renderPresetNotesList(p) {
+  const root = document.getElementById("ivp_notes_list");
+  if (!root) return;
+  const notes = (p.notes || []).slice().reverse();
+  if (!notes.length) { root.innerHTML = `<div class="muted small">No notes yet.</div>`; return; }
+  root.innerHTML = notes.map(n => `
+    <div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+      <div class="flex-between" style="margin-bottom:4px">
+        <span class="muted small">${escapeHtml((n.at || "").slice(0, 10))}${n.source === "interview" ? ' · <span class="tag">from a job</span>' : ""}</span>
+        <span style="display:flex;gap:4px">
+          <button class="icon-btn small ivpn_edit" data-id="${escapeHtml(n.id)}" title="Edit" aria-label="Edit">${ICON_PENCIL}</button>
+          <button class="icon-btn small danger ivpn_del" data-id="${escapeHtml(n.id)}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
+        </span>
+      </div>
+      <div style="white-space:pre-wrap;line-height:1.5">${escapeHtml(n.text)}</div>
+    </div>`).join("");
+  root.querySelectorAll(".ivpn_del").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    if (!confirm("Delete this note?")) return;
+    p.notes = p.notes.filter(x => x.id !== id); saveState(); renderPresetDetail(p.id);
   }));
-  list.querySelectorAll(".ivp_down").forEach(b => b.addEventListener("click", e => {
-    const i = +e.currentTarget.dataset.i; const arr = interviewPresets().slice();
-    if (i >= arr.length - 1) return; [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]]; state.interview_presets = arr; saveState(); renderInterviewPresets();
+  root.querySelectorAll(".ivpn_edit").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    const n = p.notes.find(x => x.id === id); if (!n) return;
+    const nv = prompt("Edit note:", n.text);
+    if (nv === null) return;
+    if (!nv.trim()) p.notes = p.notes.filter(x => x.id !== id);
+    else { n.text = nv.trim(); n.at = nowISO(); }
+    saveState(); renderPresetDetail(p.id);
   }));
+}
+
+async function runPresetSummary(id) {
+  const p = presetById(id);
+  if (!p) return;
+  const notes = (p.notes || []);
+  if (!notes.length) { alert("Add at least one note first — the summary is built from your notes (and any review notes that rolled up from jobs)."); return; }
+  if (!confirm(`Generate an AI summary of your "${p.name}" interviews from its ${notes.length} note(s)? (~$0.005 via Claude)`)) return;
+  const btn = document.getElementById("ivp_summary_btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Summarizing…"; }
+  try {
+    const prompt = `You are condensing a candidate's accumulated notes about a specific interview ROUND TYPE into a concise reference summary they can reuse to prepare for future interviews of this type. The candidate is a senior frontend engineer in Toronto.
+
+INTERVIEW ROUND TYPE: ${p.name}
+
+NOTES (across past interviews, chronological):
+${notes.map(n => `- (${(n.at || "").slice(0, 10)}) ${n.text}`).join("\n").slice(0, 6000)}
+
+Write a neutral 3-6 sentence summary capturing: what this round typically involves, recurring questions or themes, what tends to go well or poorly for the candidate, and concrete prep tips. Plain prose — no headings, no bullet points. Return ONLY the summary text.`;
+    const result = await askClaude(prompt, [], 0.005, "haiku", "Stage summary", 800);
+    const text = (typeof result === "string" ? result : (result?.content || result?.text || "")).trim();
+    if (!text) throw new Error("Empty response");
+    p.ai_summary = text; p.ai_summary_at = nowISO();
+    saveState(); renderPresetDetail(p.id);
+    showToast("Stage summary updated");
+  } catch (e) {
+    alert("Summary failed: " + (e.message || e));
+    if (btn) btn.disabled = false;
+  }
 }
 
 function renderResumes() {
