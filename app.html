@@ -158,7 +158,7 @@ header h1 {
 .header-actions-row .cost-counter:first-of-type { margin-left: auto; }
 /* Bottom navigation — sits as the last flex child of .app; safe-area padding for iPhone home bar */
 nav.tabs {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
   background: rgba(255,255,255,.92);
   backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px);
   border-top: 1px solid var(--line);
@@ -611,6 +611,9 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <h1>Phone Screen Tool</h1>
   </div>
   <div class="right header-actions-row">
+    <button class="icon-btn" id="menuBtn" title="Menu / Settings" aria-label="Open menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"/></svg>
+    </button>
     <span class="cost-counter" id="syncIndicator" title="Cloud sync status">sync: off</span>
     <button class="icon-btn" id="refreshBtn" title="Pull latest from cloud" aria-label="Refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
@@ -706,7 +709,9 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 <!-- ========== QUEUE (with Intake + Detail sub-views) ========== -->
 <section class="view" data-view="queue">
   <div id="q_list_view">
-    <h2 style="margin:0 0 14px">Queue</h2>
+    <button class="btn ghost" id="q_to_batches_btn" style="margin-bottom:10px">← Batches</button>
+    <h2 style="margin:0 0 4px">Unbatched</h2>
+    <p class="muted small" style="margin:0 0 14px">Jobs you've added but not yet grouped into a batch. Screen them, then select and create a batch.</p>
     <button class="fab" id="q_add_btn" aria-label="Add job" title="Add job">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
@@ -823,8 +828,9 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   <h2>Batches</h2>
   <div id="b_list_view">
     <div class="notice">Each batch groups a set of qualified jobs you work on together. Run the analyzer, choose a resume version, mark submitted, track responses.</div>
+    <div id="b_unbatched_bucket"></div>
     <div class="card" id="b_list_card">
-      <div class="muted small" id="b_empty" style="text-align:center;padding:20px;display:none">No batches yet. Create one from the <b>Queue</b>.</div>
+      <div class="muted small" id="b_empty" style="text-align:center;padding:20px;display:none">No batches yet. Open <b>Unbatched</b> above, select some jobs, and create one.</div>
       <div id="b_list"></div>
     </div>
   </div>
@@ -880,6 +886,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 <!-- ========== SETTINGS (Profile + Criteria + Sync + API + Backup) ========== -->
 <section class="view" data-view="settings">
   <div id="settings_menu_view">
+    <button class="btn ghost" id="settings_exit_btn" style="margin-bottom:14px">← Back</button>
     <h2>Settings</h2>
     <div class="settings-menu" id="settings_menu_list"></div>
   </div>
@@ -929,7 +936,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 
   <div class="card" data-settings-section="criteria" id="crit_list_card">
     <h3>Screening criteria sets</h3>
-    <p class="small muted" style="margin:0 0 12px">Define multiple variants of "what counts as a good role" and test them in parallel — e.g. old-fashioned enterprise vs. established tech vs. startups. Pick the active one on the Queue page; each batch records which variant it used.</p>
+    <p class="small muted" style="margin:0 0 12px">Define multiple variants of "what counts as a good role" and test them in parallel — e.g. old-fashioned enterprise vs. established tech vs. startups. Pick the active one on the Unbatched page (Batches → Unbatched); each batch records which variant it used.</p>
     <div id="crit_list"></div>
     <button class="btn ghost" id="crit_new_btn" style="margin-top:10px">+ New criteria set</button>
   </div>
@@ -1151,9 +1158,6 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 </div>
 
 <nav class="tabs" id="tabs">
-  <button data-tab="queue" aria-label="Queue" title="Queue">
-    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm0 5.25h.007v.008H3.75V12zm0 5.25h.007v.008H3.75v-.008z"/></svg>
-  </button>
   <button data-tab="batches" aria-label="Batches" title="Batches">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
   </button>
@@ -1162,9 +1166,6 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   </button>
   <button data-tab="dashboard" aria-label="Dashboard" title="Dashboard">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
-  </button>
-  <button data-tab="settings" aria-label="Settings" title="Settings">
-    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.213-1.28z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
   </button>
 </nav>
 
@@ -1805,8 +1806,18 @@ function updateCostCounter() {
 // ============================================================================
 // Tab switching
 // ============================================================================
-function showTab(name) {
-  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+// Which top-level view is currently shown, and the bottom-tab each view maps to.
+// Queue ("Unbatched") lives under the Batches tab; Settings lives behind the hamburger (no bottom tab).
+let currentView = "batches";
+let lastMainView = "batches";
+const VIEW_TO_TAB = { queue: "batches", batches: "batches", resumes: "resumes", dashboard: "dashboard", settings: null };
+
+// Low-level: render a top-level view in place. Does NOT touch the URL. The router calls this.
+function applyTab(name) {
+  currentView = name;
+  if (name !== "settings") lastMainView = name;
+  const tab = VIEW_TO_TAB[name] || null;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll("section.view").forEach(v => v.classList.toggle("active", v.dataset.view === name));
   if (name === "queue") renderQueue();
   if (name === "batches") renderBatches();
@@ -1815,6 +1826,40 @@ function showTab(name) {
   if (name === "settings") { renderSetup(); renderSettings(); }
   if (typeof updateCommentBadge === "function") updateCommentBadge();
 }
+
+// ============================================================================
+// Hash router — GitHub Pages is static, so routing is client-side via location.hash.
+// Routes: #/batches  #/queue  #/resumes  #/dashboard  #/settings  #/batch/<id>  #/job/<id>
+// ============================================================================
+function viewHash(name) { return "#/" + name; }
+// Set the hash; returns true if it actually changed (which will fire hashchange → route()).
+function setHash(h) { if (location.hash === h) return false; location.hash = h; return true; }
+
+function route() {
+  const raw = (location.hash || "").replace(/^#\/?/, "");
+  const parts = raw.split("/").filter(Boolean);
+  const head = parts[0] || "";
+  switch (head) {
+    case "batch":
+      if (parts[1]) { applyTab("batches"); applyBatchDetail(decodeURIComponent(parts[1])); return; }
+      break;
+    case "job":
+      if (parts[1]) { applyJobDetail(decodeURIComponent(parts[1])); return; }
+      break;
+    case "queue":     applyTab("queue"); return;
+    case "resumes":   applyTab("resumes"); return;
+    case "dashboard": applyTab("dashboard"); return;
+    case "settings":  applyTab("settings"); return;
+    case "batches":   applyTab("batches"); return;
+  }
+  if (setHash("#/batches")) return; // normalize empty/unknown hash → re-routes via hashchange
+  applyTab("batches");
+}
+window.addEventListener("hashchange", route);
+
+// Public navigation wrappers — update the URL (back button + deep links work).
+// If the URL is already correct (e.g. an in-place refresh), re-apply directly without a history entry.
+function showTab(name) { if (!setHash(viewHash(name))) applyTab(name); }
 
 const SETTINGS_SECTIONS = [
   { key: "profile",  label: "Profile",            sub: "Name, contact, target titles, bios",
@@ -2038,15 +2083,16 @@ function renderUsageSummary() {
 }
 
 document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+document.getElementById("menuBtn").addEventListener("click", () => showTab("settings"));
 
 // ============================================================================
 // COMMENT BAR + DRAWER — per-page feedback / requests / improvements
 // ============================================================================
 const COMMENT_PAGES = ["queue", "batches", "resumes", "dashboard", "settings"];
-const PAGE_LABELS = { queue: "Queue", batches: "Batches", resumes: "Resumes", dashboard: "Dashboard", settings: "Settings" };
+const PAGE_LABELS = { queue: "Unbatched", batches: "Batches", resumes: "Resumes", dashboard: "Dashboard", settings: "Settings" };
 let commentFilter = "open";
 
-function currentPage() { return document.querySelector("nav.tabs button.active")?.dataset.tab || "queue"; }
+function currentPage() { return currentView || "batches"; }
 function commentThread(page) {
   if (!state.comments) state.comments = {};
   if (!Array.isArray(state.comments[page])) state.comments[page] = [];
@@ -3020,6 +3066,7 @@ function backToQueueFromIntake() {
 }
 document.getElementById("q_add_btn").addEventListener("click", showIntakeView);
 document.getElementById("q_intake_back_btn").addEventListener("click", backToQueueFromIntake);
+document.getElementById("q_to_batches_btn").addEventListener("click", () => showTab("batches"));
 
 function buildJobFromIntake({ urlOnly = false } = {}) {
   const url = document.getElementById("j_url").value.trim();
@@ -3552,17 +3599,20 @@ function offerAutoAnalyze(batch) {
 let jobDetailReturnCtx = { type: "queue" }; // or { type: "batch", batchId }
 
 function showJobDetail(jobId, returnCtx) {
-  const j = state.jobs.find(x => x.id === jobId);
-  if (!j) return;
   jobDetailReturnCtx = returnCtx || { type: "queue" };
-  // Always switch to the queue tab visually (it holds the detail view)
-  showTab("queue");
+  if (!setHash("#/job/" + encodeURIComponent(jobId))) applyJobDetail(jobId);
+}
+
+function applyJobDetail(jobId) {
+  const j = state.jobs.find(x => x.id === jobId);
+  if (!j) { applyTab("batches"); return; }   // deep-link to a deleted job → fall back to Batches
+  // The job detail lives inside the queue section; show that section, then swap to the detail pane.
+  applyTab("queue");
   document.getElementById("q_list_view").style.display = "none";
   document.getElementById("q_intake_view").style.display = "none";
   document.getElementById("q_detail_view").style.display = "block";
-  // Update back button label
   const backBtn = document.getElementById("q_back_btn");
-  backBtn.textContent = jobDetailReturnCtx.type === "batch" ? "← Back to batch" : "← Back to queue";
+  backBtn.textContent = jobDetailReturnCtx.type === "batch" ? "← Back to batch" : "← Back to Unbatched";
   renderJobDetail(j, false);
   window.scrollTo(0, 0);
 }
@@ -3570,17 +3620,10 @@ function showJobDetail(jobId, returnCtx) {
 function backToQueue() {
   if (jobDetailReturnCtx.type === "batch" && jobDetailReturnCtx.batchId) {
     const batch = state.batches.find(b => b.id === jobDetailReturnCtx.batchId);
-    if (batch) {
-      document.getElementById("q_detail_view").style.display = "none";
-      showTab("batches");
-      showBatchDetail(batch.id);
-      jobDetailReturnCtx = { type: "queue" };
-      return;
-    }
+    jobDetailReturnCtx = { type: "queue" };
+    if (batch) { showBatchDetail(batch.id); return; }
   }
-  document.getElementById("q_list_view").style.display = "block";
-  document.getElementById("q_detail_view").style.display = "none";
-  renderQueue();
+  showTab("queue");
 }
 document.getElementById("q_back_btn").addEventListener("click", backToQueue);
 
@@ -3913,6 +3956,23 @@ Return JSON only.`;
 function renderBatches() {
   document.getElementById("b_list_view").style.display = "block";
   document.getElementById("b_detail_view").style.display = "none";
+
+  // "Unbatched" bucket — the former Queue, now surfaced as a bucket on the Batches page.
+  const bucket = document.getElementById("b_unbatched_bucket");
+  if (bucket) {
+    const unbatched = state.jobs.filter(j => j.status === "queued");
+    const qualified = unbatched.filter(j => j.screening?.qualified).length;
+    bucket.innerHTML = `
+      <div class="list-item" id="b_unbatched_card" style="cursor:pointer">
+        <div class="grow">
+          <div><b>Unbatched</b> <span class="tag">${unbatched.length} job${unbatched.length === 1 ? "" : "s"}</span></div>
+          <div class="muted small">${qualified} qualified · tap to add, screen, and create batches</div>
+        </div>
+        <span aria-hidden="true" style="font-size:22px;color:var(--muted-2);line-height:1">›</span>
+      </div>`;
+    document.getElementById("b_unbatched_card").addEventListener("click", () => showTab("queue"));
+  }
+
   const list = document.getElementById("b_list");
   list.innerHTML = "";
   document.getElementById("b_empty").style.display = state.batches.length ? "none" : "block";
@@ -4008,7 +4068,7 @@ function renderBatches() {
     const batch = state.batches.find(x => x.id === e.currentTarget.dataset.id);
     if (!batch) return;
     const count = batch.job_ids.length;
-    if (!confirm(`Delete ${batch.id} and move its ${count} job(s) back to the queue?\n\nThe jobs themselves are NOT deleted — they return to "queued" status. Q&A and ATS results stored on each job remain.`)) return;
+    if (!confirm(`Delete ${batch.id} and move its ${count} job(s) back to Unbatched?\n\nThe jobs themselves are NOT deleted — they return to "queued" status. Q&A and ATS results stored on each job remain.`)) return;
     batch.job_ids.forEach(jid => {
       const j = state.jobs.find(x => x.id === jid);
       if (j) { j.batch_id = null; j.status = "queued"; }
@@ -4021,8 +4081,12 @@ function renderBatches() {
 }
 
 function showBatchDetail(batchId) {
+  if (!setHash("#/batch/" + encodeURIComponent(batchId))) applyBatchDetail(batchId);
+}
+
+function applyBatchDetail(batchId) {
   const b = state.batches.find(x => x.id === batchId);
-  if (!b) return;
+  if (!b) { applyTab("batches"); return; }   // deep-link to a deleted batch → fall back to list
   document.getElementById("b_list_view").style.display = "none";
   document.getElementById("b_detail_view").style.display = "block";
   const root = document.getElementById("b_detail");
@@ -4127,7 +4191,7 @@ function showBatchDetail(batchId) {
   renderBatchJobs(b);
 }
 
-document.getElementById("b_back_btn").addEventListener("click", renderBatches);
+document.getElementById("b_back_btn").addEventListener("click", () => showTab("batches"));
 
 function renderBatchAnalysis(b) {
   const card = document.getElementById("b_analysis_card");
@@ -4273,7 +4337,7 @@ function renderBatchJobs(b) {
     const id = e.currentTarget.dataset.id;
     const j = state.jobs.find(x => x.id === id);
     if (!j) return;
-    if (!confirm(`Remove "${j.title}" from this batch? It will go back to the queue (still saved).`)) return;
+    if (!confirm(`Remove "${j.title}" from this batch? It will go back to Unbatched (still saved).`)) return;
     b.job_ids = b.job_ids.filter(x => x !== id);
     if (j.batch_id === b.id) { j.batch_id = null; j.status = "queued"; }
     saveState();
@@ -5022,6 +5086,7 @@ document.getElementById("s_balance").addEventListener("input", e => {
   updateCostCounter();
 });
 document.getElementById("settings_back_btn").addEventListener("click", showSettingsMenu);
+document.getElementById("settings_exit_btn").addEventListener("click", () => showTab(lastMainView || "batches"));
 document.getElementById("s_template_new_btn").addEventListener("click", () => editTemplate(null));
 document.getElementById("s_template_save_btn").addEventListener("click", () => {
   const id = document.getElementById("s_template_save_btn").dataset.id;
@@ -5068,8 +5133,7 @@ document.getElementById("s_gist_pull").addEventListener("click", async () => {
     const ok = await pullFromGist(false);
     if (ok) {
       showToast("Synced from cloud");
-      const active = document.querySelector("nav.tabs button.active")?.dataset.tab || "queue";
-      showTab(active);
+      applyTab(currentView);  // re-render current view in place after a background sync
     }
   } finally { btn.disabled = false; btn.textContent = "Pull from gist now"; }
 });
@@ -5180,8 +5244,7 @@ document.getElementById("refreshBtn").addEventListener("click", async () => {
     const ok = await pullFromGist(true);
     if (ok) {
       showToast("Synced from cloud");
-      const active = document.querySelector("nav.tabs button.active")?.dataset.tab || "queue";
-      showTab(active);
+      applyTab(currentView);  // re-render current view in place after a background sync
     } else {
       showToast("Refresh failed — check Settings", 3000);
     }
@@ -5410,7 +5473,7 @@ function hideLock() {
 // Init
 // ============================================================================
 bindSetupInputs();
-showTab("queue");
+route();   // apply the initial view from location.hash (defaults to #/batches)
 updateCostCounter();
 setSyncIndicator(state.settings?.last_synced_at ? "synced" : "off");
 
@@ -5435,8 +5498,7 @@ setSyncIndicator(state.settings?.last_synced_at ? "synced" : "off");
       if (ok) {
         // Re-render the current tab in place (no full reload)
         showToast("Synced from cloud");
-        const active = document.querySelector("nav.tabs button.active")?.dataset.tab || "queue";
-        showTab(active);
+        applyTab(currentView);  // re-render current view in place after a background sync
       }
     } else {
       setSyncIndicator("synced");
@@ -5470,8 +5532,7 @@ setInterval(async () => {
       const ok = await pullFromGist(true);
       if (ok) {
         showToast("Synced from cloud");
-        const active = document.querySelector("nav.tabs button.active")?.dataset.tab || "queue";
-        showTab(active);
+        applyTab(currentView);  // re-render current view in place after a background sync
       }
     }
   } catch (e) { /* silent */ }
