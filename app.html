@@ -223,11 +223,19 @@ h3 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); text-transform: u
 .col { flex: 1 1 200px; }
 label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
 input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], textarea, select {
-  width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: var(--card); color: var(--fg);
+  width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 12px; background: var(--card); color: var(--fg);
   transition: border-color .15s;
 }
-textarea { min-height: 100px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5; }
+textarea { min-height: 100px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.5; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+/* Collapsible read-mode note: clamped 3-line preview + chevron; tap to expand. Shared by company + interview-preset notes. */
+.note-acc > summary { list-style: none; cursor: pointer; display: flex; align-items: flex-start; gap: 8px; }
+.note-acc > summary::-webkit-details-marker { display: none; }
+.note-acc > summary::marker { content: ""; }
+.note-acc .note-text { flex: 1; min-width: 0; white-space: pre-wrap; line-height: 1.5; font-size: 12px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.note-acc[open] .note-text { -webkit-line-clamp: unset; overflow: visible; }
+.note-acc .note-chev { flex: none; margin-top: 3px; color: var(--muted); transition: transform .15s; }
+.note-acc[open] .note-chev { transform: rotate(180deg); }
 
 button.btn {
   background: var(--fg); color: var(--bg);
@@ -610,12 +618,12 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   button.btn { min-height: 40px; padding: 10px 18px; font-size: 14px; }
   button.btn.ghost, button.btn.secondary, button.btn.danger { min-height: 40px; }
   input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], textarea, select {
-    font-size: 16px; /* prevents iOS auto-zoom on focus */
+    font-size: 12px; /* iOS focus-zoom already blocked by viewport maximum-scale=1 */
     padding: 10px 14px;
     min-height: 44px;
     border-radius: 12px;
   }
-  textarea { min-height: 120px; font-size: 12px; }
+  textarea { min-height: 120px; font-size: 11px; }
   label { font-size: 13px; }
 
   /* Stats: 2 cols on mobile */
@@ -925,7 +933,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <h3 id="r_edit_title">Edit resume</h3>
     <div class="row"><div class="col">
       <label>Version notes — what changed vs the prior version</label>
-      <textarea id="r_notes" style="min-height:60px;font-family:inherit;font-size:12px" placeholder="e.g. Added 'design system' to S&P Global bullet. Strengthened metrics on Amazon role."></textarea>
+      <textarea id="r_notes" style="min-height:60px;font-family:inherit;font-size:11px" placeholder="e.g. Added 'design system' to S&P Global bullet. Strengthened metrics on Amazon role."></textarea>
     </div></div>
     <div class="row" style="align-items:flex-end;gap:10px">
       <div class="col"><label>Output template</label>
@@ -1010,7 +1018,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <div class="row" style="margin-top:14px">
       <div class="col">
         <label>Default application questions (one per line — used by the batch analyzer)</label>
-        <textarea id="p_default_questions" style="min-height:160px;font-family:inherit;font-size:12px" placeholder="One question per line"></textarea>
+        <textarea id="p_default_questions" style="min-height:160px;font-family:inherit;font-size:11px" placeholder="One question per line"></textarea>
         <p class="small muted" style="margin-top:4px">When a batch is analyzed, Claude drafts answers to each of these questions per job. Edit freely.</p>
       </div>
     </div>
@@ -1105,7 +1113,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   <div class="card" data-settings-section="templates" id="s_template_edit_card" style="display:none">
     <h3 id="s_template_edit_title">Edit template</h3>
     <div class="row"><div class="col"><label>Name</label><input type="text" id="s_template_name" placeholder="e.g. Two-column modern"></div></div>
-    <div class="row"><div class="col"><label>Description (plain English layout & styling instructions)</label><textarea id="s_template_description" style="min-height:280px;font-family:inherit;font-size:12px;line-height:1.5"></textarea></div></div>
+    <div class="row"><div class="col"><label>Description (plain English layout & styling instructions)</label><textarea id="s_template_description" style="min-height:280px;font-family:inherit;font-size:11px;line-height:1.5"></textarea></div></div>
     <div class="row" style="gap:8px;margin-top:10px">
       <button class="btn" id="s_template_save_btn">Save</button>
       <button class="btn ghost" id="s_template_cancel_btn">Cancel</button>
@@ -3075,7 +3083,7 @@ function renderJobInterviewsHTML(j) {
             <button class="icon-btn small" onclick="editInterviewQuestion('${j.id}','${s.id}','${q.id}')" title="Edit question" aria-label="Edit question">${ICON_PENCIL}</button>
           </div>
           ${q.answer
-            ? `<div style="background:var(--soft);padding:10px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45">${escapeHtml(q.answer)}</div>`
+            ? `<div style="background:var(--soft);padding:10px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45;max-height:220px;overflow-y:auto">${escapeHtml(q.answer)}</div>`
             : `<div class="muted small" style="padding:2px 0">No answer yet — tap the ✦ to generate one with Claude, or the pencil to write your own.</div>`}
           <div class="row" style="gap:4px;margin-top:6px">
             <button class="icon-btn small" onclick="generateInterviewAnswer('${j.id}','${s.id}','${q.id}')" title="AI generate answer (~$0.006)" aria-label="AI generate answer">${ICON_SPARK}</button>
@@ -4532,6 +4540,9 @@ Return JSON only.`;
         <button class="icon-btn" id="d_psdate" title="Set phone-screen date" aria-label="Set phone-screen date">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
         </button>
+        <button class="icon-btn" id="d_move_batch" title="Move to batch" aria-label="Move to batch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
+        </button>
         ${j.url ? `<a class="icon-btn" href="${escapeHtml(j.url)}" target="_blank" rel="noopener" title="Open source" aria-label="Open source">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
         </a>` : ""}
@@ -4639,6 +4650,7 @@ Return JSON only.`;
     renderJobDetail(j, false);
     showToast("Phone screen date set");
   });
+  document.getElementById("d_move_batch").addEventListener("click", () => moveJobToBatch(j));
   const copyBtn = document.getElementById("d_copy_raw");
   if (copyBtn) {
     copyBtn.addEventListener("click", async (e) => {
@@ -5357,6 +5369,42 @@ function moveSelectedToBatch(b) {
   showActionSheet(`Move ${ids.length} job(s) to…`, candidates.map(x => ({ label: `${x.id} — ${x.job_ids.length} job(s), ${x.status}`, onClick: () => moveInto(x) })));
 }
 
+// Move a single job (from its detail page) into another batch — drawer of destinations (#J-move).
+function moveJobToBatch(j) {
+  const detach = () => {
+    if (j.batch_id) {
+      const cur = state.batches.find(b => b.id === j.batch_id);
+      if (cur) cur.job_ids = cur.job_ids.filter(x => x !== j.id);
+    }
+  };
+  const moveInto = (target) => {
+    if (target.id === j.batch_id) { showToast("Already in this batch."); return; }
+    detach();
+    if (!target.job_ids.includes(j.id)) target.job_ids.push(j.id);
+    j.batch_id = target.id;
+    if (j.status === "queued") j.status = "batched";
+    saveState();
+    showToast(`Moved to ${target.id}`, 2500);
+    renderJobDetail(j, false);
+    setTimeout(() => offerAutoAnalyze(target), 200);
+  };
+  const newBatch = () => { const nb = createEmptyBatch(); moveInto(nb); };
+  // Open batches other than the one this job is already in, newest first.
+  const candidates = state.batches.filter(b => b.id !== j.batch_id && (b.status === "draft" || b.status === "analyzed")).slice().reverse();
+  const options = [{ label: "＋ New batch", onClick: newBatch }];
+  if (j.batch_id) {
+    options.push({ label: "Remove from batch (move to Unbatched)", onClick: () => {
+      detach();
+      j.batch_id = null; j.status = "queued";
+      saveState();
+      showToast("Moved to Unbatched", 2500);
+      renderJobDetail(j, false);
+    } });
+  }
+  options.push(...candidates.map(x => ({ label: `${x.id} — ${x.job_ids.length} job(s), ${x.status}`, onClick: () => moveInto(x) })));
+  showActionSheet(j.batch_id ? `Move from ${j.batch_id} to…` : "Add this job to a batch…", options);
+}
+
 // ============================================================================
 // ATS check (port of ats_score.py)
 // ============================================================================
@@ -5803,6 +5851,20 @@ function renderCompanyDetail(id) {
   renderCompanyNotesList(c);
 }
 
+// Read-mode note body. Short notes show plainly; long ones become a tap-to-expand accordion
+// (clamped 3-line preview + chevron). Shared by company notes and interview preset stage notes.
+function noteReadHTML(text) {
+  const t = text || "";
+  const safe = escapeHtml(t);
+  const isLong = t.length > 140 || (t.match(/\n/g) || []).length >= 3;
+  if (!isLong) {
+    return `<div class="note-text" style="white-space:pre-wrap;line-height:1.5;font-size:12px">${safe}</div>`;
+  }
+  return `<details class="note-acc">
+    <summary><span class="note-text">${safe}</span><svg class="note-chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></summary>
+  </details>`;
+}
+
 function renderCompanyNotesList(c) {
   const root = document.getElementById("co_notes_list");
   if (!root) return;
@@ -5817,7 +5879,7 @@ function renderCompanyNotesList(c) {
           <button class="icon-btn small danger co_note_del" data-id="${escapeHtml(n.id)}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
         </span>
       </div>
-      <div style="white-space:pre-wrap;line-height:1.5">${escapeHtml(n.text)}</div>
+      ${noteReadHTML(n.text)}
     </div>`).join("");
   root.querySelectorAll(".co_note_del").forEach(b => b.addEventListener("click", e => {
     const id = e.currentTarget.dataset.id;
@@ -5869,6 +5931,7 @@ Write a neutral 3-6 sentence summary capturing: what the company does, culture/s
 // INTERVIEW PRESETS sub-tab (Setup) — configurable default stages for new jobs
 // ============================================================================
 let presetDetailId = null;   // when set, the Interviews panel shows that preset's detail
+let presetEditingNoteId = null;   // when set, that preset note renders as an inline editable textarea
 
 function renderInterviewPresets() {
   const panel = document.getElementById("rt_panel_interviews");
@@ -5907,7 +5970,7 @@ function renderInterviewPresetsList() {
         <button class="icon-btn small ivp_down" data-i="${i}" title="Move down" aria-label="Move down" ${i === presets.length - 1 ? "disabled" : ""}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg></button>
         <button class="icon-btn small danger ivp_del" data-i="${i}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
       </div>`;
-    item.addEventListener("click", e => { if (e.target.closest("[data-noopen]")) return; presetDetailId = p.id; renderPresetDetail(p.id); });
+    item.addEventListener("click", e => { if (e.target.closest("[data-noopen]")) return; presetDetailId = p.id; presetEditingNoteId = null; renderPresetDetail(p.id); });
     list.appendChild(item);
   });
   panel.querySelector("#ivp_new_btn").addEventListener("click", () => {
@@ -5960,7 +6023,7 @@ function renderPresetDetail(id) {
       <div id="ivp_notes_list" style="margin-top:12px"></div>
     </div>`;
 
-  panel.querySelector("#ivp_back").addEventListener("click", () => { presetDetailId = null; renderInterviewPresetsList(); });
+  panel.querySelector("#ivp_back").addEventListener("click", () => { presetDetailId = null; presetEditingNoteId = null; renderInterviewPresetsList(); });
   const nameInput = panel.querySelector("#ivp_name");
   nameInput.addEventListener("change", () => {
     const nv = nameInput.value.trim();
@@ -5982,30 +6045,52 @@ function renderPresetNotesList(p) {
   if (!root) return;
   const notes = (p.notes || []).slice().reverse();
   if (!notes.length) { root.innerHTML = `<div class="muted small">No notes yet.</div>`; return; }
-  root.innerHTML = notes.map(n => `
-    <div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+  root.innerHTML = notes.map(n => {
+    const meta = `<span class="muted small">${escapeHtml((n.at || "").slice(0, 10))}${n.source === "interview" ? ' · <span class="tag">from a job</span>' : ""}</span>`;
+    if (n.id === presetEditingNoteId) {
+      // Inline edit: edit the note right here in a textarea instead of a prompt() popup.
+      return `<div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+        <div class="flex-between" style="margin-bottom:6px">${meta}</div>
+        <textarea class="ivpn_edit_ta" data-id="${escapeHtml(n.id)}" style="min-height:80px">${escapeHtml(n.text)}</textarea>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <button class="btn ivpn_save" data-id="${escapeHtml(n.id)}" style="padding:6px 12px">Save</button>
+          <button class="btn ghost ivpn_cancel" style="padding:6px 12px">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
       <div class="flex-between" style="margin-bottom:4px">
-        <span class="muted small">${escapeHtml((n.at || "").slice(0, 10))}${n.source === "interview" ? ' · <span class="tag">from a job</span>' : ""}</span>
+        ${meta}
         <span style="display:flex;gap:4px">
           <button class="icon-btn small ivpn_edit" data-id="${escapeHtml(n.id)}" title="Edit" aria-label="Edit">${ICON_PENCIL}</button>
           <button class="icon-btn small danger ivpn_del" data-id="${escapeHtml(n.id)}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
         </span>
       </div>
-      <div style="white-space:pre-wrap;line-height:1.5">${escapeHtml(n.text)}</div>
-    </div>`).join("");
+      ${noteReadHTML(n.text)}
+    </div>`;
+  }).join("");
   root.querySelectorAll(".ivpn_del").forEach(b => b.addEventListener("click", e => {
     const id = e.currentTarget.dataset.id;
     if (!confirm("Delete this note?")) return;
-    p.notes = p.notes.filter(x => x.id !== id); saveState(); renderPresetDetail(p.id);
+    p.notes = p.notes.filter(x => x.id !== id); presetEditingNoteId = null; saveState(); renderPresetDetail(p.id);
   }));
   root.querySelectorAll(".ivpn_edit").forEach(b => b.addEventListener("click", e => {
+    presetEditingNoteId = e.currentTarget.dataset.id;
+    renderPresetNotesList(p);   // re-render only the notes list so the "add note" box keeps any unsaved text
+    const ta = root.querySelector(".ivpn_edit_ta");
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }));
+  root.querySelectorAll(".ivpn_save").forEach(b => b.addEventListener("click", e => {
     const id = e.currentTarget.dataset.id;
-    const n = p.notes.find(x => x.id === id); if (!n) return;
-    const nv = prompt("Edit note:", n.text);
-    if (nv === null) return;
-    if (!nv.trim()) p.notes = p.notes.filter(x => x.id !== id);
-    else { n.text = nv.trim(); n.at = nowISO(); }
-    saveState(); renderPresetDetail(p.id);
+    const ta = root.querySelector(`.ivpn_edit_ta[data-id="${id}"]`);
+    const n = p.notes.find(x => x.id === id); if (!n || !ta) return;
+    const nv = ta.value.trim();
+    if (!nv) p.notes = p.notes.filter(x => x.id !== id);   // emptied = delete, matching old behaviour
+    else { n.text = nv; n.at = nowISO(); }
+    presetEditingNoteId = null; saveState(); renderPresetDetail(p.id);
+  }));
+  root.querySelectorAll(".ivpn_cancel").forEach(b => b.addEventListener("click", () => {
+    presetEditingNoteId = null; renderPresetNotesList(p);
   }));
 }
 
