@@ -1190,10 +1190,20 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 <!-- ========== DASHBOARD ========== -->
 <section class="view" data-view="dashboard">
   <h2>Dashboard</h2>
+  <div class="row" style="gap:8px;align-items:center;margin-bottom:10px">
+    <label style="margin:0;flex:0 0 auto;font-size:13px;color:var(--muted)">Criteria set</label>
+    <select id="d_filter_criteria" title="Scope the metrics below to one criteria set" style="flex:1 1 auto;max-width:280px"></select>
+  </div>
   <div id="d_stats" class="stats"></div>
-  <div class="card"><h3>Conversion funnel (all batches)</h3><div id="d_funnel"></div></div>
-  <div class="card"><h3>Per-batch performance</h3><canvas id="d_chart" style="max-height:260px"></canvas></div>
+  <div class="card"><h3 id="d_funnel_title">Conversion funnel (all batches)</h3><div id="d_funnel"></div></div>
+  <div class="card"><h3 id="d_perbatch_title">Per-batch performance</h3><canvas id="d_chart" style="max-height:260px"></canvas></div>
   <div class="card"><h3>Batch table</h3><div id="d_batch_table" class="scroll-x"></div></div>
+  <div class="card">
+    <h3>Conversion rate by criteria set</h3>
+    <p class="small muted" style="margin:0 0 10px">Phone-screen and response rates aggregated across each set's batches — compare which screening profile converts best. (Not affected by the filter above.)</p>
+    <canvas id="d_set_chart" style="max-height:260px"></canvas>
+    <div id="d_set_table" class="scroll-x" style="margin-top:12px"></div>
+  </div>
 </section>
 
 </main>
@@ -5337,8 +5347,30 @@ document.getElementById("r_cancel_btn").addEventListener("click", () => { docume
 // DASHBOARD
 // ============================================================================
 let chartInstance = null;
+let setChartInstance = null;
+let dashFilter = "";   // criteria-set id to scope the dashboard to ("" = all)
+
+// Jobs belonging to a given criteria-set filter (via their batch's criteria_id). "" = every job.
+function jobsForDashFilter(filter) {
+  if (!filter) return state.jobs;
+  const ids = new Set(state.batches.filter(b => b.criteria_id === filter).flatMap(b => b.job_ids));
+  return state.jobs.filter(j => ids.has(j.id));
+}
+
 function renderDashboard() {
-  const jobs = state.jobs;
+  // Criteria-set filter selector
+  const fsel = document.getElementById("d_filter_criteria");
+  if (fsel) {
+    fsel.innerHTML = [`<option value="">All criteria sets</option>`]
+      .concat((state.criteria_sets || []).map(cs => `<option value="${escapeHtml(cs.id)}">${escapeHtml(cs.name)}${csEnabled(cs) ? "" : " (off)"}</option>`)).join("");
+    fsel.value = dashFilter;
+    fsel.onchange = () => { dashFilter = fsel.value; renderDashboard(); };
+  }
+  const filterName = dashFilter ? (criteriaById(dashFilter)?.name || dashFilter) : null;
+  document.getElementById("d_funnel_title").textContent = filterName ? `Conversion funnel — ${filterName}` : "Conversion funnel (all batches)";
+  document.getElementById("d_perbatch_title").textContent = filterName ? `Per-batch performance — ${filterName}` : "Per-batch performance";
+
+  const jobs = jobsForDashFilter(dashFilter);
   const submitted = jobs.filter(j => j.status !== "queued" && j.status !== "batched");
   const responded = jobs.filter(j => j.response_at);
   const screens = jobs.filter(j => ["phonescreen","onsite","offer"].includes(j.status));
@@ -5368,8 +5400,9 @@ function renderDashboard() {
     return `<div class="funnel-row"><div class="muted">${name}</div><div class="bar"><div style="width:${w}%"></div></div><div class="num">${n}</div><div class="num muted">${pct(n, base)}</div></div>`;
   }).join("");
 
-  // Per-batch chart
-  const batches = state.batches.map(b => {
+  // Per-batch chart (scoped to the selected criteria set, if any)
+  const batchList = dashFilter ? state.batches.filter(b => b.criteria_id === dashFilter) : state.batches;
+  const batches = batchList.map(b => {
     const bJobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
     const apps = bJobs.filter(j => j.status !== "batched" && j.status !== "queued").length;
     const resp = bJobs.filter(j => j.response_at).length;
@@ -5401,8 +5434,43 @@ function renderDashboard() {
     html += `<tr><td>${escapeHtml(b.id)}</td><td class="num">${b.apps}</td><td class="num">${b.resp}</td><td class="num">${b.screen}</td><td class="num">${b.offer}</td><td class="num">${pct(b.resp, b.apps)}</td><td class="num">${pct(b.screen, b.apps)}</td></tr>`;
   });
   html += `</tbody></table>`;
-  if (!batches.length) html = `<div class="muted small" style="text-align:center;padding:20px">No batches yet.</div>`;
+  if (!batches.length) html = `<div class="muted small" style="text-align:center;padding:20px">${dashFilter ? "No batches in this criteria set." : "No batches yet."}</div>`;
   document.getElementById("d_batch_table").innerHTML = html;
+
+  // ---- Conversion rate BY criteria set (compares all sets; ignores the filter above) ----
+  const setRows = (state.criteria_sets || []).map(cs => {
+    const setBatches = state.batches.filter(b => b.criteria_id === cs.id);
+    const sJobs = setBatches.flatMap(b => b.job_ids).map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
+    const sub = sJobs.filter(j => j.status !== "queued" && j.status !== "batched").length;
+    const resp = sJobs.filter(j => j.response_at).length;
+    const scr = sJobs.filter(j => ["phonescreen","onsite","offer"].includes(j.status)).length;
+    const off = sJobs.filter(j => j.status === "offer").length;
+    return { name: cs.name, enabled: csEnabled(cs), batches: setBatches.length, sub, resp, scr, off,
+             respRate: sub ? Math.round(100 * resp / sub) : 0, scrRate: sub ? Math.round(100 * scr / sub) : 0 };
+  }).filter(r => r.batches > 0);
+
+  const setCtx = document.getElementById("d_set_chart");
+  if (setChartInstance) { setChartInstance.destroy(); setChartInstance = null; }
+  if (setCtx && typeof Chart !== "undefined" && setRows.length) {
+    setChartInstance = new Chart(setCtx, {
+      type: "bar",
+      data: {
+        labels: setRows.map(r => r.name),
+        datasets: [
+          { label: "Phone-screen rate %", data: setRows.map(r => r.scrRate), backgroundColor: "#0369a1" },
+          { label: "Response rate %", data: setRows.map(r => r.respRate), backgroundColor: "#60a5fa" }
+        ]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, ticks: { precision: 0 } } } }
+    });
+  }
+  let setHtml = `<table><thead><tr><th>Criteria set</th><th class="num">Batches</th><th class="num">Submitted</th><th class="num">Screen</th><th class="num">Screen %</th><th class="num">Resp %</th></tr></thead><tbody>`;
+  setRows.forEach(r => {
+    setHtml += `<tr><td>${escapeHtml(r.name)}${r.enabled ? "" : ` <span class="tag rejected">off</span>`}</td><td class="num">${r.batches}</td><td class="num">${r.sub}</td><td class="num">${r.scr}</td><td class="num">${pct(r.scr, r.sub)}</td><td class="num">${pct(r.resp, r.sub)}</td></tr>`;
+  });
+  setHtml += `</tbody></table>`;
+  if (!setRows.length) setHtml = `<div class="muted small" style="text-align:center;padding:16px">No batches assigned to any criteria set yet.</div>`;
+  document.getElementById("d_set_table").innerHTML = setHtml;
 }
 function pct(n, d) { return d ? Math.round(100 * n / d) + "%" : "—"; }
 
