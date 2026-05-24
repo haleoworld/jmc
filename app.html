@@ -168,14 +168,15 @@ nav.tabs {
 }
 :root[data-theme="dark"] nav.tabs { background: rgba(0,0,0,.92); }
 nav.tabs button {
-  background: transparent; border: none; border-radius: 999px; cursor: pointer;
-  padding: 8px; min-height: 48px; width: 100%;
-  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 14px; cursor: pointer;
+  padding: 6px 4px; min-height: 50px; width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   color: var(--muted);
   transition: color .12s, background-color .12s;
   min-width: 0;
   margin: 0 auto;
 }
+nav.tabs button .tab-label { font-size: 10px; font-weight: 600; line-height: 1; letter-spacing: .01em; }
 @media (hover: hover) {
   nav.tabs button:hover { color: var(--fg); background: var(--hover); }
 }
@@ -220,7 +221,7 @@ input[type=text], input[type=email], input[type=tel], input[type=url], input[typ
   width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: var(--card); color: var(--fg);
   transition: border-color .15s;
 }
-textarea { min-height: 100px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.5; }
+textarea { min-height: 100px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.5; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 
 button.btn {
@@ -389,6 +390,22 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 .subtab-panel.from-left.active { animation-name: subtabInLeft; }
 @keyframes subtabInLeft { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 
+/* ---- Full-screen resume preview ---- */
+.resume-fs { position: fixed; inset: 0; z-index: 250; background: var(--card); display: flex; flex-direction: column; }
+.resume-fs-bar { flex: 0 0 auto; display: flex; justify-content: flex-end; padding: calc(env(safe-area-inset-top) + 8px) 12px 8px; border-bottom: 1px solid var(--line); background: var(--card); }
+.resume-fs-body { flex: 1 1 auto; overflow: auto; -webkit-overflow-scrolling: touch; background: #e9edf3; display: flex; justify-content: center; padding: 12px 0 calc(env(safe-area-inset-bottom) + 12px); }
+.resume-fs-body iframe { border: 0; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.15); }
+
+/* ---- Bottom action sheet (FAB menus, quick choices) ---- */
+.sheet-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.35); display: flex; align-items: flex-end; justify-content: center; animation: sheetFade .15s ease; }
+.sheet { width: 100%; max-width: 460px; background: var(--card); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); box-shadow: var(--shadow-lg); animation: sheetUp .2s ease; }
+.sheet-title { font-weight: 700; font-size: 13px; padding: 8px 8px 10px; color: var(--muted); }
+.sheet-btn { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 12px; padding: 14px; font: inherit; font-size: 16px; color: var(--fg); cursor: pointer; }
+@media (hover: hover) { .sheet-btn:hover { background: var(--hover); } }
+.sheet-btn.cancel { color: var(--muted); margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0; }
+@keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sheetUp { from { transform: translateY(24px); } to { transform: none; } }
+
 /* ---- Comment bar (pinned above bottom nav) + slide-up drawer ---- */
 #comment_bar {
   flex-shrink: 0;
@@ -534,6 +551,17 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 .queue-card .actions button:hover { color: var(--accent); background: var(--accent-soft); }
 .queue-card .actions button.danger:hover { color: var(--bad); background: var(--bad-bg); }
 
+/* Compact icon button (used in dense rows like batch job cards) */
+.icon-btn.small { width: 32px; height: 32px; }
+.icon-btn.small svg { width: 17px; height: 17px; }
+/* Batch job cards: tighter so all the info fits without sprawling */
+.batch-job-card { padding: 12px 14px; }
+.batch-job-card .top { gap: 10px; }
+.batch-job-card .top input[type=checkbox] { margin-top: 3px; }
+.batch-job-card .avatar { width: 36px; height: 36px; font-size: 13px; }
+.batch-job-card .main .ctl-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 8px; }
+.batch-job-card .main .ctl-row .j_status { flex: 1 1 130px; max-width: 200px; min-height: 32px; padding: 5px 10px; font-size: 13px; }
+
 /* For batches & resumes — same card style */
 .list-item {
   display: flex; gap: 12px; padding: 14px 16px;
@@ -576,7 +604,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     min-height: 44px;
     border-radius: 12px;
   }
-  textarea { min-height: 120px; font-size: 14px; }
+  textarea { min-height: 120px; font-size: 12px; }
   label { font-size: 13px; }
 
   /* Stats: 2 cols on mobile */
@@ -644,9 +672,10 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <button class="icon-btn" id="refreshBtn" title="Pull latest from cloud" aria-label="Refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
     </button>
-    <button class="icon-btn" id="themeBtn" title="Toggle light/dark" aria-label="Toggle theme">
+    <button class="icon-btn" id="themeBtn" title="Theme: light / dark / auto" aria-label="Toggle theme">
       <svg id="themeIconLight" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
       <svg id="themeIconDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+      <svg id="themeIconAuto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"/></svg>
     </button>
     <span class="cost-counter" id="costCounter">$0.00</span>
   </div>
@@ -742,29 +771,14 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
 
-    <div class="row" style="gap:8px;align-items:center;margin-bottom:10px">
-      <label style="margin:0;flex:0 0 auto;font-size:13px;color:var(--muted)">Screening</label>
-      <select id="q_criteria_select" style="flex:1 1 auto"></select>
-    </div>
     <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
       <label style="margin:0;display:flex;align-items:center;gap:6px;flex:0 0 auto;font-size:14px;color:var(--muted)"><input type="checkbox" id="q_show_rejected" style="accent-color:var(--accent)"> Show rejected</label>
-      <select id="q_filter_status" style="flex:1 1 180px;max-width:240px">
-        <option value="">All statuses</option>
-        <option value="queued">Queued</option>
-        <option value="batched">In batch</option>
-        <option value="submitted">Submitted</option>
-        <option value="phonescreen">Phone screen</option>
-        <option value="onsite">Onsite</option>
-        <option value="offer">Offer</option>
-        <option value="rejected_by_co">Rejected by company</option>
-      </select>
     </div>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <button class="btn ghost" id="q_select_all">Select all</button>
       <span class="muted small" id="q_selected_count">0 selected</span>
       <button class="btn ghost" id="q_rescreen_all" style="margin-left:auto">Re-screen all</button>
       <button class="btn ghost" id="q_add_to_batch">Add to batch…</button>
-      <button class="btn" id="q_create_batch">Create batch</button>
     </div>
 
     <div id="q_list"></div>
@@ -853,14 +867,15 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 <section class="view" data-view="batches">
   <h2>Batches</h2>
   <div id="b_list_view">
-    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
-      <button class="btn" id="b_add_batch_btn">+ Batch</button>
-      <button class="btn ghost" id="b_add_job_list_btn">+ Add job</button>
-      <select id="b_filter_criteria" title="Filter batches by criteria set" style="flex:1 1 150px;max-width:240px;margin-left:auto"></select>
+    <button class="fab" id="b_fab" aria-label="Add" title="Add a job or a batch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <div class="row" style="gap:8px;align-items:center;margin-bottom:10px">
+      <label style="margin:0;flex:0 0 auto;font-size:13px;color:var(--muted)">Criteria set</label>
+      <select id="b_filter_criteria" title="Filter batches by criteria set" style="flex:1 1 auto;max-width:280px"></select>
     </div>
-    <div id="b_unbatched_bucket"></div>
     <div class="card" id="b_list_card">
-      <div class="muted small" id="b_empty" style="text-align:center;padding:20px;display:none">No batches yet. Tap <b>+ Batch</b>, or open <b>Unbatched</b> above and create one from selected jobs.</div>
+      <div class="muted small" id="b_empty" style="text-align:center;padding:20px;display:none">No batches yet. Tap the <b>+</b> button to add a batch or a job.</div>
       <div id="b_list"></div>
     </div>
   </div>
@@ -898,7 +913,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <h3 id="r_edit_title">Edit resume</h3>
     <div class="row"><div class="col">
       <label>Version notes — what changed vs the prior version</label>
-      <textarea id="r_notes" style="min-height:60px;font-family:inherit;font-size:14px" placeholder="e.g. Added 'design system' to S&P Global bullet. Strengthened metrics on Amazon role."></textarea>
+      <textarea id="r_notes" style="min-height:60px;font-family:inherit;font-size:12px" placeholder="e.g. Added 'design system' to S&P Global bullet. Strengthened metrics on Amazon role."></textarea>
     </div></div>
     <div class="row" style="align-items:flex-end;gap:10px">
       <div class="col"><label>Output template</label>
@@ -977,7 +992,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <div class="row" style="margin-top:14px">
       <div class="col">
         <label>Default application questions (one per line — used by the batch analyzer)</label>
-        <textarea id="p_default_questions" style="min-height:160px;font-family:inherit;font-size:14px" placeholder="One question per line"></textarea>
+        <textarea id="p_default_questions" style="min-height:160px;font-family:inherit;font-size:12px" placeholder="One question per line"></textarea>
         <p class="small muted" style="margin-top:4px">When a batch is analyzed, Claude drafts answers to each of these questions per job. Edit freely.</p>
       </div>
     </div>
@@ -1068,11 +1083,24 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   <div class="card" data-settings-section="templates" id="s_template_edit_card" style="display:none">
     <h3 id="s_template_edit_title">Edit template</h3>
     <div class="row"><div class="col"><label>Name</label><input type="text" id="s_template_name" placeholder="e.g. Two-column modern"></div></div>
-    <div class="row"><div class="col"><label>Description (plain English layout & styling instructions)</label><textarea id="s_template_description" style="min-height:280px;font-family:inherit;font-size:13px;line-height:1.5"></textarea></div></div>
+    <div class="row"><div class="col"><label>Description (plain English layout & styling instructions)</label><textarea id="s_template_description" style="min-height:280px;font-family:inherit;font-size:12px;line-height:1.5"></textarea></div></div>
     <div class="row" style="gap:8px;margin-top:10px">
       <button class="btn" id="s_template_save_btn">Save</button>
       <button class="btn ghost" id="s_template_cancel_btn">Cancel</button>
     </div>
+  </div>
+
+  <div class="card" data-settings-section="appearance">
+    <h3>Appearance</h3>
+    <div class="row"><div class="col">
+      <label>Theme</label>
+      <select id="s_theme">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="system">Auto (follow system)</option>
+      </select>
+      <p class="small muted" style="margin-top:6px">Saved on this device only (not synced). The header button cycles the same setting.</p>
+    </div></div>
   </div>
 
   <div class="card" data-settings-section="claude">
@@ -1219,12 +1247,15 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 <nav class="tabs" id="tabs">
   <button data-tab="batches" aria-label="Batches" title="Batches">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
-  </button>
-  <button data-tab="resumes" aria-label="Resumes" title="Resumes">
-    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+    <span class="tab-label">Batches</span>
   </button>
   <button data-tab="dashboard" aria-label="Dashboard" title="Dashboard">
-    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.942"/></svg>
+    <span class="tab-label">Dashboard</span>
+  </button>
+  <button data-tab="resumes" aria-label="Setup" title="Setup">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"/></svg>
+    <span class="tab-label">Setup</span>
   </button>
 </nav>
 
@@ -1899,6 +1930,8 @@ function applyTab(name) {
 function viewHash(name) { return "#/" + name; }
 // Set the hash; returns true if it actually changed (which will fire hashchange → route()).
 function setHash(h) { if (location.hash === h) return false; location.hash = h; return true; }
+// Navigate to a hash route. If the hash didn't change (already there), re-apply by routing directly.
+function navigate(h) { if (!setHash(h)) route(); }
 
 function route() {
   const raw = (location.hash || "").replace(/^#\/?/, "");
@@ -1906,14 +1939,14 @@ function route() {
   const head = parts[0] || "";
   switch (head) {
     case "batch":
-      if (parts[1]) { applyTab("batches"); applyBatchDetail(decodeURIComponent(parts[1])); return; }
+      if (parts[1]) { applyTab("batches"); applyBatchDetail(decodeURIComponent(parts[1]), parts[2]); return; }
       break;
     case "job":
-      if (parts[1]) { applyJobDetail(decodeURIComponent(parts[1])); return; }
+      if (parts[1]) { applyJobDetail(decodeURIComponent(parts[1]), parts[2]); return; }
       break;
     case "add":       applyTab("queue"); showIntakeView(); return;   // job-intake form (lives in the queue section)
     case "queue":     applyTab("queue"); return;
-    case "resumes":   applyTab("resumes"); return;
+    case "resumes":   applyTab("resumes"); if (parts[1]) setSubtab("resumes", parts[1]); return;
     case "dashboard": applyTab("dashboard"); return;
     case "settings":  applyTab("settings"); return;
     case "batches":   applyTab("batches"); return;
@@ -1938,7 +1971,7 @@ const subtabState = {};
 
 function setSubtab(group, key) { const root = document.querySelector(`.subtabs[data-subtab-group="${group}"]`); if (root && root._showSubtab) root._showSubtab(key); }
 
-function initSubtabs(rootEl) {
+function initSubtabs(rootEl, opts = {}) {
   if (!rootEl) return;
   const group = rootEl.dataset.subtabGroup || "default";
   const heads = [...rootEl.querySelectorAll(".subtab-head")];
@@ -1957,6 +1990,9 @@ function initSubtabs(rootEl) {
     });
     const ah = heads.find(h => h.dataset.subtab === key);
     if (ah) { try { ah.scrollIntoView({ inline: "center", block: "nearest" }); } catch (e) {} }
+    // Reflect the active sub-tab in the URL (deep-linkable). hashFor returns null when this
+    // group's view isn't the one on screen, so we never clobber the URL from a background init.
+    if (opts.hashFor) { const h = opts.hashFor(key); if (h && location.hash !== h) { try { history.replaceState(null, "", h); } catch (e) {} } }
   }
   rootEl._showSubtab = show;
 
@@ -1998,9 +2034,25 @@ function relocateResumeSubtabs() {
   if (tplPanel) document.querySelectorAll('[data-settings-section="templates"]').forEach(el => { el.removeAttribute("data-settings-section"); tplPanel.appendChild(el); });
 }
 
+// Bottom action sheet for quick choices. options: [{ label, onClick }]
+function showActionSheet(title, options) {
+  const overlay = document.createElement("div");
+  overlay.className = "sheet-overlay";
+  overlay.innerHTML = `<div class="sheet" role="dialog" aria-label="${escapeHtml(title)}"><div class="sheet-title">${escapeHtml(title)}</div>${options.map((o, i) => `<button class="sheet-btn" data-i="${i}">${escapeHtml(o.label)}</button>`).join("")}<button class="sheet-btn cancel" data-cancel="1">Cancel</button></div>`;
+  const close = () => overlay.remove();
+  overlay.addEventListener("click", e => {
+    if (e.target === overlay || e.target.dataset.cancel) { close(); return; }
+    const btn = e.target.closest(".sheet-btn[data-i]");
+    if (btn) { const o = options[+btn.dataset.i]; close(); if (o && o.onClick) o.onClick(); }
+  });
+  document.body.appendChild(overlay);
+}
+
 const SETTINGS_SECTIONS = [
   { key: "profile",  label: "Profile",            sub: "Name, contact, target titles, bios",
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>` },
+  { key: "appearance", label: "Appearance",       sub: "Light / dark / auto theme",
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l2.88-2.88c.438-.439 1.15-.439 1.59 0l3.712 3.713c.44.44.44 1.152 0 1.59l-2.879 2.88M6.75 17.25h.008v.008H6.75v-.008z"/></svg>` },
   { key: "claude",   label: "Claude access",      sub: "API key, model selection",
     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>` },
   { key: "usage",    label: "Usage & budget",     sub: "Per-call cost tracking, monthly budget",
@@ -2063,6 +2115,8 @@ function populateSettingsFields() {
   document.getElementById("s_budget").value = s.budget_usd || "";
   document.getElementById("s_balance").value = s.balance_usd || "";
   document.getElementById("p_default_questions").value = (s.default_questions || []).join("\n");
+  const themeSel = document.getElementById("s_theme");
+  if (themeSel) themeSel.value = loadTheme();
 }
 
 function renderSettings() {
@@ -2107,7 +2161,7 @@ function renderTemplatesList() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
       </button>
       <button class="icon-btn danger t_del" data-id="${escapeHtml(t.id)}" title="Delete" aria-label="Delete">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
       </button>
     </div>
   `).join("");
@@ -2263,7 +2317,7 @@ function renderCommentList() {
         <div class="cd-meta">${escapeHtml(fmtCommentTime(c.created_at))}${c.done && c.done_at ? " · done " + escapeHtml(fmtCommentTime(c.done_at)) : ""}</div>
       </div>
       <button class="icon-btn danger cd-del" title="Delete" aria-label="Delete">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
       </button>
     </div>`).join("");
   list.querySelectorAll(".cd-check").forEach(ch => ch.addEventListener("change", e => toggleCommentDone(e.target.closest(".cd-item").dataset.id)));
@@ -2396,11 +2450,10 @@ function renderCriteriaList() {
   const root = document.getElementById("crit_list");
   if (!root) return;
   root.innerHTML = (state.criteria_sets || []).map(cs => {
-    const isActive = cs.id === state.active_criteria_id;
     const enabled = csEnabled(cs);
     return `<div class="list-item" data-cid="${escapeHtml(cs.id)}" style="cursor:pointer${enabled ? "" : ";opacity:.55"}">
       <div class="grow">
-        <div><b>${escapeHtml(cs.name)}</b>${isActive && enabled ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">active</span>` : ""}${!enabled ? ` <span class="tag rejected">off</span>` : ""}</div>
+        <div><b>${escapeHtml(cs.name)}</b>${enabled ? ` <span class="tag qualified">on</span>` : ` <span class="tag rejected">off</span>`}</div>
         <div class="muted small">${(cs.target_companies||[]).length} target companies · floor ${cs.comp_floor ? "$"+cs.comp_floor/1000+"k" : "—"}${cs.min_frontend_percent ? " · FE ≥ "+cs.min_frontend_percent+"%" : ""}</div>
       </div>
       <button class="icon-btn c_toggle" data-id="${escapeHtml(cs.id)}" title="${enabled ? "Disable (skip in screening; keeps config)" : "Enable (use in screening)"}" aria-label="${enabled ? "Disable" : "Enable"}">
@@ -2412,7 +2465,7 @@ function renderCriteriaList() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
       </button>
       <button class="icon-btn danger c_del" data-id="${escapeHtml(cs.id)}" title="Delete" aria-label="Delete">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
       </button>
     </div>`;
   }).join("");
@@ -3598,18 +3651,12 @@ function renderQueue() {
   document.getElementById("q_list_view").style.display = "block";
   document.getElementById("q_detail_view").style.display = "none";
   document.getElementById("q_intake_view").style.display = "none";
-  // Populate the active criteria-set selector
-  const csel = document.getElementById("q_criteria_select");
-  if (csel) {
-    csel.innerHTML = enabledCriteriaSets().map(cs => `<option value="${escapeHtml(cs.id)}">${escapeHtml(cs.name)}</option>`).join("");
-    csel.value = activeCriteria()?.id || "";
-  }
   const root = document.getElementById("q_list");
   const showRejected = document.getElementById("q_show_rejected").checked;
-  const filter = document.getElementById("q_filter_status").value;
+  // Unbatched = jobs not assigned to any batch (#21). Hide rejected unless toggled.
   const jobs = state.jobs.filter(j => {
+    if (j.batch_id) return false;
     if (!showRejected && !j.screening?.qualified) return false;
-    if (filter && j.status !== filter) return false;
     return true;
   }).slice().reverse();
   root.innerHTML = "";
@@ -3698,26 +3745,6 @@ function updateSelectedCount() {
   if (sel) sel.textContent = (total > 0 && n === total) ? "Deselect all" : "Select all";
 }
 document.getElementById("q_show_rejected").addEventListener("change", renderQueue);
-document.getElementById("q_filter_status").addEventListener("change", renderQueue);
-document.getElementById("q_criteria_select").addEventListener("change", e => {
-  state.active_criteria_id = e.target.value;
-  const cs = activeCriteria();
-  // Re-screen only QUEUED jobs (batched ones keep their batch's variant)
-  const queued = state.jobs.filter(j => j.status === "queued");
-  let q = 0, r = 0;
-  queued.forEach(j => {
-    if (!((j.raw_text && j.raw_text.length > 50) || (j.tech_stack||[]).length || (j.requirements||[]).length)) return;
-    const before = !!j.screening?.qualified;
-    rescreenJob(j, cs.id);
-    if (!before && j.screening.qualified) q++;
-    if (before && !j.screening.qualified) r++;
-  });
-  saveState();
-  showToast(`Active set: ${cs.name}. Re-screened ${queued.length} queued jobs (+${q} / −${r}).`, 3500);
-  renderQueue();
-  const scorable = queued.filter(j => (j.raw_text || "").trim().length >= 50);
-  if (scorable.length && confirmAiCost(scorable.length)) runAiFitBulk(scorable);
-});
 document.getElementById("q_select_all").addEventListener("click", () => {
   const boxes = document.querySelectorAll(".q_chk");
   if (!boxes.length) { showToast("No queued jobs to select. Turn on \"Show rejected\" or change the filter."); return; }
@@ -3743,31 +3770,19 @@ document.getElementById("q_rescreen_all").addEventListener("click", () => {
   const scorable = state.jobs.filter(j => (j.raw_text || "").trim().length >= 50);
   if (scorable.length && confirmAiCost(scorable.length)) runAiFitBulk(scorable);
 });
-document.getElementById("q_create_batch").addEventListener("click", () => {
-  const ids = [...document.querySelectorAll(".q_chk:checked")].map(c => c.dataset.id);
-  if (!ids.length) { alert("Select at least one job from the queue first."); return; }
-  const id = "batch_" + String(state.nextBatchId++).padStart(3, "0");
-  const batch = {
-    id, created_at: nowISO(), status: "draft",
-    job_ids: ids, resume_version_id: null, analysis: null,
-    criteria_id: state.active_criteria_id,
-    submitted_at: null
-  };
-  state.batches.push(batch);
-  ids.forEach(jid => { const j = state.jobs.find(j => j.id === jid); if (j) { j.status = "batched"; j.batch_id = id; } });
-  saveState();
-  showTab("batches");
-  showBatchDetail(id);
-  // Offer to auto-generate Q&A for the new batch
-  setTimeout(() => offerAutoAnalyze(batch), 200);
-});
-
 document.getElementById("q_add_to_batch").addEventListener("click", () => {
   const ids = [...document.querySelectorAll(".q_chk:checked")].map(c => c.dataset.id);
-  if (!ids.length) { alert("Select at least one job from the queue first."); return; }
+  if (!ids.length) { alert("Select at least one job first."); return; }
   // Eligible target batches: drafts or analyzed (not yet submitted)
   const candidates = state.batches.filter(b => b.status === "draft" || b.status === "analyzed");
-  if (!candidates.length) { alert("No existing batches to add to. Use 'Create batch' first."); return; }
+  if (!candidates.length) {
+    if (confirm("No open batches to add to. Create a new batch with the selected job(s)?")) {
+      const nb = createEmptyBatch();
+      ids.forEach(jid => { const j = state.jobs.find(j => j.id === jid); if (j) { nb.job_ids.push(jid); j.status = "batched"; j.batch_id = nb.id; } });
+      saveState(); showBatchDetail(nb.id); setTimeout(() => offerAutoAnalyze(nb), 200);
+    }
+    return;
+  }
   // Build a numbered picker
   const picker = candidates.slice().reverse().map((b, i) => `${i + 1}. ${b.id} — ${b.job_ids.length} job(s), ${b.status}`).join("\n");
   const choice = prompt(`Add ${ids.length} selected job(s) to which batch?\n\n${picker}\n\nEnter number 1–${candidates.length}:`);
@@ -3807,10 +3822,13 @@ let jobDetailReturnCtx = { type: "queue" }; // or { type: "batch", batchId }
 
 function showJobDetail(jobId, returnCtx) {
   jobDetailReturnCtx = returnCtx || { type: "queue" };
-  if (!setHash("#/job/" + encodeURIComponent(jobId))) applyJobDetail(jobId);
+  const base = "#/job/" + encodeURIComponent(jobId);
+  // Already on this job (possibly a sub-tab route)? Re-apply in place; otherwise navigate.
+  if (location.hash === base || location.hash.startsWith(base + "/")) applyJobDetail(jobId);
+  else if (!setHash(base)) applyJobDetail(jobId);
 }
 
-function applyJobDetail(jobId) {
+function applyJobDetail(jobId, sub) {
   const j = state.jobs.find(x => x.id === jobId);
   if (!j) { applyTab("batches"); return; }   // deep-link to a deleted job → fall back to Batches
   // The job detail lives inside the queue section; show that section, then swap to the detail pane.
@@ -3820,7 +3838,8 @@ function applyJobDetail(jobId) {
   document.getElementById("q_detail_view").style.display = "block";
   const backBtn = document.getElementById("q_back_btn");
   backBtn.textContent = jobDetailReturnCtx.type === "batch" ? "← Back to batch" : "← Back to Unbatched";
-  subtabState["job"] = "overview";   // open a freshly-selected job on Overview (re-renders keep the current sub-tab)
+  // Honor a deep-linked sub-tab; otherwise open a freshly-selected job on Overview.
+  subtabState["job"] = sub || "overview";
   renderJobDetail(j, false);
   window.scrollTo(0, 0);
 }
@@ -4176,7 +4195,7 @@ Return JSON only.`;
     backToQueue();
     showToast("Job deleted");
   });
-  initSubtabs(root.querySelector('.subtabs'));
+  initSubtabs(root.querySelector('.subtabs'), { hashFor: k => location.hash.startsWith("#/job/") ? "#/job/" + encodeURIComponent(j.id) + "/" + k : null });
 }
 
 // ============================================================================
@@ -4186,27 +4205,13 @@ function renderBatches() {
   document.getElementById("b_list_view").style.display = "block";
   document.getElementById("b_detail_view").style.display = "none";
 
-  // "Unbatched" bucket — the former Queue, now surfaced as a bucket on the Batches page.
-  const bucket = document.getElementById("b_unbatched_bucket");
-  if (bucket) {
-    const unbatched = state.jobs.filter(j => j.status === "queued");
-    const qualified = unbatched.filter(j => j.screening?.qualified).length;
-    bucket.innerHTML = `
-      <div class="list-item" id="b_unbatched_card" style="cursor:pointer">
-        <div class="grow">
-          <div><b>Unbatched</b> <span class="tag">${unbatched.length} job${unbatched.length === 1 ? "" : "s"}</span></div>
-          <div class="muted small">${qualified} qualified · tap to add, screen, and create batches</div>
-        </div>
-        <span aria-hidden="true" style="font-size:22px;color:var(--muted-2);line-height:1">›</span>
-      </div>`;
-    document.getElementById("b_unbatched_card").addEventListener("click", () => showTab("queue"));
-  }
-
-  // Toolbar — add-batch, add-job, criteria-set filter. Use .onclick (idempotent across re-renders).
-  const addBatchBtn = document.getElementById("b_add_batch_btn");
-  if (addBatchBtn) addBatchBtn.onclick = () => { const nb = createEmptyBatch(); showToast(`Created ${nb.id}`); showBatchDetail(nb.id); };
-  const addJobBtn = document.getElementById("b_add_job_list_btn");
-  if (addJobBtn) addJobBtn.onclick = () => openIntake({ from: "batches" });
+  // FAB → action sheet: add a job or a batch (#3)
+  const fab = document.getElementById("b_fab");
+  if (fab) fab.onclick = () => showActionSheet("Add to your pipeline", [
+    { label: "Add a job", onClick: () => openIntake({ from: "batches" }) },
+    { label: "Add a batch", onClick: () => { const nb = createEmptyBatch(); showToast(`Created ${nb.id}`); showBatchDetail(nb.id); } }
+  ]);
+  // Criteria-set filter. Use .onclick/.onchange (idempotent across re-renders).
   const filterSel = document.getElementById("b_filter_criteria");
   if (filterSel) {
     filterSel.innerHTML = [`<option value="">All criteria sets</option>`]
@@ -4217,12 +4222,30 @@ function renderBatches() {
 
   const list = document.getElementById("b_list");
   list.innerHTML = "";
+
+  // "Unbatched" card — grouped with the batch cards but without action buttons (#12). Hidden when filtering by a set.
+  if (!batchListFilter) {
+    const unbatched = state.jobs.filter(j => !j.batch_id);
+    const uq = unbatched.filter(j => j.screening?.qualified).length;
+    const uCard = document.createElement("div");
+    uCard.className = "list-item";
+    uCard.style.cursor = "pointer";
+    uCard.innerHTML = `
+      <div class="grow">
+        <div><b>Unbatched</b> <span class="tag">${unbatched.length} job${unbatched.length === 1 ? "" : "s"}</span></div>
+        <div class="muted small">${uq} qualified · tap to add &amp; screen jobs</div>
+      </div>
+      <span aria-hidden="true" style="font-size:22px;color:var(--muted-2);line-height:1">›</span>`;
+    uCard.addEventListener("click", () => showTab("queue"));
+    list.appendChild(uCard);
+  }
+
   const shown = state.batches.filter(b => !batchListFilter || b.criteria_id === batchListFilter);
   const emptyEl = document.getElementById("b_empty");
   emptyEl.style.display = shown.length ? "none" : "block";
   if (!shown.length) emptyEl.innerHTML = (batchListFilter && state.batches.length)
     ? "No batches match this filter."
-    : "No batches yet. Tap <b>+ Batch</b>, or open <b>Unbatched</b> above and create one from selected jobs.";
+    : "No batches yet. Tap the <b>+</b> button to add a batch or a job.";
   shown.slice().reverse().forEach(b => {
     const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
     const submitted = jobs.filter(j => ["submitted","phonescreen","onsite","offer","rejected_by_co"].includes(j.status)).length;
@@ -4246,8 +4269,11 @@ function renderBatches() {
         <button class="icon-btn b_act_edit" data-id="${b.id}" title="Edit (manage jobs)" aria-label="Edit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
         </button>
-        <button class="icon-btn b_act_ats" data-id="${b.id}" title="Run ATS check" aria-label="Run ATS check">
+        <button class="icon-btn b_act_ats" data-id="${b.id}" title="Run ATS check (deterministic)" aria-label="Run ATS check">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </button>
+        <button class="icon-btn b_act_ai_ats" data-id="${b.id}" title="AI ATS — whole-batch resume fit (~$0.02)" aria-label="AI ATS check" ${b.is_analyzing ? "disabled" : ""}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
         </button>
         <button class="icon-btn b_act_analyze" data-id="${b.id}" title="Analyze batch (generate Q&A)" aria-label="Analyze batch" ${b.is_analyzing ? "disabled" : ""}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.091 3.091zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
@@ -4256,7 +4282,7 @@ function renderBatches() {
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
         </button>
         <button class="icon-btn danger b_act_delete" data-id="${b.id}" title="Delete batch (move jobs back to queue)" aria-label="Delete batch" style="margin-left:auto">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
         </button>
       </div>
     `;
@@ -4287,6 +4313,13 @@ function renderBatches() {
     }
     showBatchDetail(batch.id);
     setTimeout(() => runATSCheck(batch), 100);
+  }));
+  list.querySelectorAll(".b_act_ai_ats").forEach(el => el.addEventListener("click", e => {
+    e.stopPropagation();
+    const batch = state.batches.find(x => x.id === e.currentTarget.dataset.id);
+    if (!batch) return;
+    showBatchDetail(batch.id);
+    setTimeout(() => runAiAtsCheck(batch), 100);
   }));
   list.querySelectorAll(".b_act_analyze").forEach(el => el.addEventListener("click", e => {
     e.stopPropagation();
@@ -4331,14 +4364,20 @@ function renderBatches() {
 let batchHeaderCollapsed = true;
 // Batches-list criteria-set filter ("" = all). Persists across re-renders this session.
 let batchListFilter = "";
+// Batch-detail Jobs status filter ("" = all). Persists across re-renders this session.
+let batchJobFilter = "";
 
 function showBatchDetail(batchId) {
-  if (!setHash("#/batch/" + encodeURIComponent(batchId))) applyBatchDetail(batchId);
+  const base = "#/batch/" + encodeURIComponent(batchId);
+  // Already on this batch (possibly a sub-tab route)? Re-apply in place; otherwise navigate.
+  if (location.hash === base || location.hash.startsWith(base + "/")) applyBatchDetail(batchId);
+  else if (!setHash(base)) applyBatchDetail(batchId);
 }
 
-function applyBatchDetail(batchId) {
+function applyBatchDetail(batchId, sub) {
   const b = state.batches.find(x => x.id === batchId);
   if (!b) { applyTab("batches"); return; }   // deep-link to a deleted batch → fall back to list
+  if (sub) subtabState["batch"] = sub;   // honor a deep-linked sub-tab
   document.getElementById("b_list_view").style.display = "none";
   document.getElementById("b_detail_view").style.display = "block";
   const root = document.getElementById("b_detail");
@@ -4407,18 +4446,39 @@ function applyBatchDetail(batchId) {
     <div class="subtabs" data-subtab-group="batch">
       <div class="subtab-bar">
         <button class="subtab-head" data-subtab="jobs">Jobs</button>
+        <button class="subtab-head" data-subtab="resume">Resume</button>
         <button class="subtab-head" data-subtab="analysis">AI Analysis</button>
       </div>
       <div class="subtab-panels">
         <div class="subtab-panel" data-subtab="jobs">
+          <button class="fab" id="b_addjob_fab" aria-label="Add job to this batch" title="Add job to this batch">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
           <div class="card">
-            <div class="flex-between" style="margin-bottom:8px">
-              <h3 style="margin:0">Jobs in this batch (${jobs.length})</h3>
-              <button class="btn ghost" id="b_add_job_btn" style="flex:0 0 auto">+ Add job</button>
+            <h3 style="margin:0 0 10px">Jobs in this batch (${jobs.length})</h3>
+            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+              <button class="btn ghost" id="bj_select_all">Select all</button>
+              <span class="muted small" id="bj_selected_count">0 selected</span>
+              <select id="bj_filter_status" style="flex:1 1 150px;max-width:200px;margin-left:auto">
+                <option value="">All statuses</option>
+                <option value="batched">In batch</option>
+                <option value="submitted">Submitted</option>
+                <option value="phonescreen">Phone screen</option>
+                <option value="onsite">Onsite</option>
+                <option value="offer">Offer</option>
+                <option value="rejected_by_co">Rejected by company</option>
+                <option value="withdrawn">Withdrawn</option>
+                <option value="ghosted">Ghosted</option>
+              </select>
+            </div>
+            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+              <button class="btn ghost" id="bj_rescreen_all">Re-screen all</button>
+              <button class="btn ghost" id="bj_move_to" style="margin-left:auto" disabled>Move to…</button>
             </div>
             <div id="b_jobs_list"></div>
           </div>
         </div>
+        <div class="subtab-panel" data-subtab="resume" id="b_resume_panel"></div>
         <div class="subtab-panel" data-subtab="analysis">
           <div class="card" id="b_analysis_card">
             <h3>AI analysis</h3>
@@ -4465,7 +4525,29 @@ function applyBatchDetail(batchId) {
   document.getElementById("b_analyzer_btn").addEventListener("click", () => runBatchAnalyzer(b));
   document.getElementById("b_resume_imp_btn").addEventListener("click", () => runResumeImprovement(b));
   document.getElementById("b_help_btn").addEventListener("click", () => showBatchHelpModal());
-  document.getElementById("b_add_job_btn").addEventListener("click", () => openIntake({ from: "batch", batchId: b.id }));
+  document.getElementById("b_addjob_fab").addEventListener("click", () => openIntake({ from: "batch", batchId: b.id }));
+  const bjFilter = document.getElementById("bj_filter_status");
+  if (bjFilter) { bjFilter.value = batchJobFilter; bjFilter.addEventListener("change", () => { batchJobFilter = bjFilter.value; renderBatchJobs(b); }); }
+  document.getElementById("bj_select_all").addEventListener("click", () => {
+    const boxes = [...document.querySelectorAll(".bj_chk")];
+    if (!boxes.length) { showToast("No jobs to select"); return; }
+    const all = boxes.every(x => x.checked);
+    boxes.forEach(x => { x.checked = !all; });
+    updateBatchJobSelected();
+  });
+  document.getElementById("bj_rescreen_all").addEventListener("click", () => {
+    if (!b.job_ids.length) { showToast("No jobs to re-screen"); return; }
+    const cs = criteriaById(b.criteria_id) || activeCriteria();
+    if (!confirm(`Re-screen all ${b.job_ids.length} job(s) in ${b.id} against "${cs.name}"?`)) return;
+    let q = 0, r = 0;
+    b.job_ids.forEach(jid => { const j = state.jobs.find(x => x.id === jid); if (!j) return; const before = !!j.screening?.qualified; rescreenJob(j, cs.id); if (!before && j.screening.qualified) q++; if (before && !j.screening.qualified) r++; });
+    saveState();
+    showToast(`Re-screened ${b.job_ids.length} job(s) (+${q} / −${r}).`, 3000);
+    renderBatchJobs(b);
+    const scorable = b.job_ids.map(id => state.jobs.find(x => x.id === id)).filter(j => j && (j.raw_text || "").trim().length >= 50);
+    if (scorable.length && confirmAiCost(scorable.length)) runAiFitBulk(scorable).then(() => renderBatchJobs(b));
+  });
+  document.getElementById("bj_move_to").addEventListener("click", () => moveSelectedToBatch(b));
   document.getElementById("b_settings_toggle").addEventListener("click", () => {
     batchHeaderCollapsed = !batchHeaderCollapsed;
     document.getElementById("b_settings_body").style.display = batchHeaderCollapsed ? "none" : "block";
@@ -4483,7 +4565,51 @@ function applyBatchDetail(batchId) {
 
   renderBatchAnalysis(b);
   renderBatchJobs(b);
-  initSubtabs(root.querySelector('.subtabs'));
+  renderBatchResume(b);
+  initSubtabs(root.querySelector('.subtabs'), { hashFor: k => location.hash.startsWith("#/batch/") ? "#/batch/" + encodeURIComponent(b.id) + "/" + k : null });
+}
+
+// Batch "Resume" sub-tab — edit the selected resume, preview/download, save edits as a new version (#18).
+function renderBatchResume(b) {
+  const panel = document.getElementById("b_resume_panel");
+  if (!panel) return;
+  if (!b.resume_version_id) {
+    panel.innerHTML = `<div class="card"><div class="muted small">No resume selected for this batch. Open the batch settings (chevron at the top) and pick a resume version — or create one on the Setup → Resume tab.</div></div>`;
+    return;
+  }
+  const v = state.resumes.versions.find(x => x.id === b.resume_version_id);
+  if (!v) { panel.innerHTML = `<div class="card"><div class="muted small">Selected resume (${escapeHtml(b.resume_version_id)}) not found.</div></div>`; return; }
+  panel.innerHTML = `
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:6px">
+        <h3 style="margin:0">Resume ${escapeHtml(v.id)}</h3>
+        <button class="btn ghost" id="br_preview" style="flex:0 0 auto">Preview / Download</button>
+      </div>
+      ${v.notes ? `<div class="muted small" style="margin-bottom:8px">${escapeHtml(v.notes)}</div>` : ""}
+      <label>Resume content (markdown or plain text)</label>
+      <textarea id="br_content" style="min-height:300px">${escapeHtml(v.content || "")}</textarea>
+      <div class="row" style="gap:8px;margin-top:10px;align-items:center">
+        <button class="btn" id="br_save_new">Save as new version</button>
+        <span class="muted small">Edits here don't change ${escapeHtml(v.id)} — they're saved as a new version this batch then uses.</span>
+      </div>
+    </div>`;
+  document.getElementById("br_preview").addEventListener("click", () => showGenerateResumeModal(v.id));
+  document.getElementById("br_save_new").addEventListener("click", () => {
+    const content = document.getElementById("br_content").value;
+    if (content === (v.content || "")) { showToast("No changes to save"); return; }
+    const notes = prompt("Notes for the new resume version (what changed?):", `Edited from ${v.id} for ${b.id}`);
+    if (notes === null) return;
+    const newId = "v" + state.nextResumeId++;
+    state.resumes.versions.push({
+      id: newId, created_at: todayISO(), filename: newId + ".md",
+      notes: notes || `Edited from ${v.id}`, template_id: v.template_id || null,
+      batch_id: b.id, parent: v.id, content
+    });
+    b.resume_version_id = newId;
+    saveState();
+    showToast(`Saved new resume version ${newId} — batch now uses it`, 3000);
+    showBatchDetail(b.id);
+  });
 }
 
 document.getElementById("b_back_btn").addEventListener("click", () => showTab("batches"));
@@ -4503,7 +4629,7 @@ function renderBatchAnalysis(b) {
     const a = b.analysis;
     html += `<div class="small muted" style="margin-bottom:10px">Per-job Q&A is on the <b>Jobs</b> tab — tap a job to view & copy answers.</div>`;
     if (a.top_requirements?.length) {
-      html += `<h4 style="margin:10px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top requirements across batch</h4><ol style="padding-left:20px;margin:0">`;
+      html += `<h4 style="margin:10px 0 6px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700">Top requirements across batch</h4><ol style="padding-left:20px;margin:0;font-size:13px">`;
       a.top_requirements.forEach(r => { html += `<li style="margin:4px 0"><b>${escapeHtml(r.requirement)}</b> <span class="muted small">— ${escapeHtml(r.impact || "?")}, ${r.count || "?"} JD(s)</span></li>`; });
       html += `</ol>`;
     }
@@ -4583,50 +4709,77 @@ function renderBatchJobs(b) {
     banner.innerHTML = `<b>Analyzing…</b> Jobs are locked until the analyzer finishes. Please don't edit jobs in this batch.`;
     root.appendChild(banner);
   }
-  b.job_ids.forEach(jid => {
-    const j = state.jobs.find(x => x.id === jid);
-    if (!j) return;
+  const visible = b.job_ids.map(id => state.jobs.find(x => x.id === id)).filter(j => j && (!batchJobFilter || j.status === batchJobFilter));
+  if (!visible.length) {
+    const empty = document.createElement("div");
+    empty.className = "muted small";
+    empty.style.cssText = "text-align:center;padding:20px";
+    empty.textContent = batchJobFilter ? "No jobs match this status filter." : "No jobs in this batch yet. Tap + to add one.";
+    root.appendChild(empty);
+  }
+  visible.forEach(j => {
     const card = document.createElement("div");
     card.className = "queue-card batch-job-card";
+    card.dataset.jobId = j.id;
     const initials = avatarInitials(j.company || "?");
     const color = avatarColor(j.company || "?");
     const statusOpts = ["batched","submitted","phonescreen","onsite","offer","rejected_by_co","withdrawn","ghosted"].map(s => `<option value="${s}" ${j.status === s ? "selected" : ""}>${s}</option>`).join("");
     const qaCount = (j.qa || []).length;
+    const fitPct = j.screening?.score != null ? ` ${j.screening.score}%` : "";
+    const screenTag = j.screening?.qualified ? `<span class="tag qualified">Qualified${fitPct}</span>` : `<span class="tag rejected">Rejected${fitPct}</span>`;
+    const aiTag = j.ai_fit ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">AI ${j.ai_fit.score}%</span>` : "";
+    const salary = j.salary_min ? `${(j.salary_min/1000).toFixed(0)}–${j.salary_max ? (j.salary_max/1000).toFixed(0) : "?"}k ${escapeHtml(j.currency || "CAD")}` : "";
+    const metaBits = [];
+    const loc = (j.locations || []).join(", "); if (loc) metaBits.push(escapeHtml(loc));
+    if (j.work_arrangement) metaBits.push(escapeHtml(j.work_arrangement));
+    if (salary) metaBits.push(salary);
     const datesLine = (j.applied_at || j.phone_screen_at)
       ? `<div class="meta small">${j.applied_at ? `Applied ${escapeHtml(j.applied_at.slice(0,10))}` : ""}${j.applied_at && j.phone_screen_at ? " · " : ""}${j.phone_screen_at ? `screen ${escapeHtml(j.phone_screen_at.slice(0,10))}` : ""}</div>`
       : "";
     card.innerHTML = `
       <div class="top">
+        <input type="checkbox" class="bj_chk" data-id="${j.id}" aria-label="Select job" onclick="event.stopPropagation()">
         <div class="avatar small" style="background:${color}" aria-hidden="true">${escapeHtml(initials)}</div>
         <div class="main">
           <div class="title-line"><span class="title">${escapeHtml(j.title)}</span> <span class="company">· ${escapeHtml(j.company || "—")}</span></div>
+          ${metaBits.length ? `<div class="meta">${metaBits.join(" · ")}</div>` : ""}
           ${datesLine}
           <div class="tags" style="margin-top:6px">
+            ${screenTag}${aiTag}
             <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
             ${qaCount > 0 ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">${qaCount} Q&A</span>` : ""}
           </div>
-          <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center;margin-left:-6px" onclick="event.stopPropagation()">
-            <select class="j_status" data-id="${j.id}" style="flex:0 0 auto;max-width:180px;min-height:34px;padding:5px 10px;font-size:13px">${statusOpts}</select>
+          <div class="ctl-row" onclick="event.stopPropagation()">
+            <select class="j_status" data-id="${j.id}">${statusOpts}</select>
+            <button class="icon-btn small j_view" data-id="${j.id}" title="View details" aria-label="View details">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </button>
+            ${j.url ? `<button class="icon-btn small j_src" data-url="${escapeHtml(j.url)}" title="Open source" aria-label="Open source">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+            </button>` : ""}
             <button class="icon-btn small j_edit" data-id="${j.id}" title="Edit job" aria-label="Edit job">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
             </button>
-            <button class="icon-btn small j_remove" data-id="${j.id}" title="Remove from batch" aria-label="Remove from batch">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 12H6"/></svg>
+            <button class="icon-btn small j_remove" data-id="${j.id}" title="Remove from batch (back to Unbatched)" aria-label="Remove from batch">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"/></svg>
             </button>
             <button class="icon-btn small danger j_delete" data-id="${j.id}" title="Delete job" aria-label="Delete">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
             </button>
           </div>
         </div>
       </div>
     `;
-    // Card click → open job detail with batch context (skip if click is on a control inside .row)
+    // Card click → open job detail with batch context (skip if click is on a control)
     card.addEventListener("click", e => {
       if (e.target.closest("select, button, input, textarea, a")) return;
       showJobDetail(j.id, { type: "batch", batchId: b.id });
     });
     root.appendChild(card);
   });
+  root.querySelectorAll(".bj_chk").forEach(c => c.addEventListener("change", updateBatchJobSelected));
+  root.querySelectorAll(".j_view").forEach(btn => btn.addEventListener("click", e => { e.stopPropagation(); showJobDetail(e.currentTarget.dataset.id, { type: "batch", batchId: b.id }); }));
+  root.querySelectorAll(".j_src").forEach(btn => btn.addEventListener("click", e => { e.stopPropagation(); window.open(e.currentTarget.dataset.url, "_blank"); }));
   root.querySelectorAll(".j_status").forEach(s => s.addEventListener("change", e => {
     e.stopPropagation();
     const j = state.jobs.find(x => x.id === e.target.dataset.id);
@@ -4668,6 +4821,42 @@ function renderBatchJobs(b) {
     showToast("Job deleted");
     showBatchDetail(b.id);
   }));
+  updateBatchJobSelected();
+}
+
+// Selection helpers for the batch Jobs sub-tab.
+function updateBatchJobSelected() {
+  const boxes = [...document.querySelectorAll(".bj_chk")];
+  const n = boxes.filter(x => x.checked).length;
+  const cnt = document.getElementById("bj_selected_count");
+  if (cnt) cnt.textContent = `${n} selected`;
+  const mv = document.getElementById("bj_move_to");
+  if (mv) mv.disabled = n === 0;
+  const sa = document.getElementById("bj_select_all");
+  if (sa) sa.textContent = (boxes.length && n === boxes.length) ? "Deselect all" : "Select all";
+}
+
+// Move the checked jobs from batch b into another open batch (#9).
+function moveSelectedToBatch(b) {
+  const ids = [...document.querySelectorAll(".bj_chk:checked")].map(c => c.dataset.id);
+  if (!ids.length) return;
+  const candidates = state.batches.filter(x => x.id !== b.id && (x.status === "draft" || x.status === "analyzed"));
+  if (!candidates.length) { alert("No other open batches to move to. Create one first with the + button on the Batches list."); return; }
+  const lines = candidates.map((x, i) => `${i + 1}. ${x.id} — ${x.job_ids.length} job(s), ${x.status}`).join("\n");
+  const choice = prompt(`Move ${ids.length} job(s) to which batch?\n\n${lines}\n\nEnter a number:`);
+  if (choice === null) return;
+  const idx = parseInt(choice, 10);
+  if (!idx || isNaN(idx) || idx < 1 || idx > candidates.length) { alert("Invalid choice."); return; }
+  const target = candidates[idx - 1];
+  ids.forEach(jid => {
+    b.job_ids = b.job_ids.filter(x => x !== jid);
+    if (!target.job_ids.includes(jid)) target.job_ids.push(jid);
+    const j = state.jobs.find(x => x.id === jid);
+    if (j) { j.batch_id = target.id; if (j.status === "queued") j.status = "batched"; }
+  });
+  saveState();
+  showToast(`Moved ${ids.length} job(s) to ${target.id}`, 3000);
+  showBatchDetail(b.id);
 }
 
 // ============================================================================
@@ -5008,7 +5197,7 @@ function renderResumes() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
       </button>
       <button class="icon-btn danger r_del" data-id="${v.id}" title="Delete" aria-label="Delete">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
       </button>
     `;
     root.appendChild(item);
@@ -5114,11 +5303,19 @@ function showGenerateResumeModal(versionId) {
       <div id="g_downloads" style="margin-top:14px;display:${v.generated_html ? "block" : "none"}">
         <div class="row"><div class="col"><label>File name (no extension)</label><input type="text" id="g_filename" value="${escapeHtml(defaultResumeFilename(v))}"></div></div>
         <h3 style="margin:14px 0 10px">Download</h3>
-        <div class="row" style="gap:8px;flex-wrap:wrap">
-          <button class="btn" id="g_dl_doc">Word (.doc) — clean PDF via Pages</button>
-          <button class="btn ghost" id="g_print">Print (PDF)</button>
-          <button class="btn ghost" id="g_dl_html">HTML</button>
-          <button class="btn ghost" id="g_dl_md">Markdown (.md)</button>
+        <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+          <button class="icon-btn" id="g_dl_doc" title="Word (.doc) — clean PDF via Pages" aria-label="Download Word doc">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+          </button>
+          <button class="icon-btn" id="g_print" title="Print / Save as PDF" aria-label="Print PDF">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z"/></svg>
+          </button>
+          <button class="icon-btn" id="g_dl_html" title="Download HTML" aria-label="Download HTML">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"/></svg>
+          </button>
+          <button class="icon-btn" id="g_dl_md" title="Download Markdown (.md)" aria-label="Download Markdown">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          </button>
         </div>
         <p class="small muted" style="margin-top:8px"><b>For a clean recruiter-ready PDF on iPhone:</b> tap <b>Word (.doc)</b> → Save to Files → open it in <b>Pages</b> → ••• → <b>Export → PDF</b>. That gives a header-free PDF with selectable text (ATS-friendly).</p>
         <p class="small muted" style="margin-top:6px"><b>Note on Print:</b> iOS Safari always stamps the date, app URL, and "Page X of Y" in the print margins — that can't be removed from a web page on iPhone. Use it only if you don't mind those, or print from a Mac (where you can untick "Headers and Footers").</p>
@@ -5133,11 +5330,17 @@ function showGenerateResumeModal(versionId) {
     document.getElementById("g_preview").innerHTML = `
       <details open>
         <summary class="muted small">Preview (scaled to fit)</summary>
+        <div class="row" style="justify-content:flex-end;margin-top:6px">
+          <button class="icon-btn" id="g_fullscreen" title="View full screen" aria-label="View full screen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+          </button>
+        </div>
         <div id="g_preview_wrap" style="overflow-y:auto;-webkit-overflow-scrolling:touch;max-height:62vh;border:1px solid var(--line);border-radius:8px;margin-top:8px;background:#fff">
           <iframe id="g_preview_frame" srcdoc="${escapeHtml(injectPrintReset(v.generated_html))}" scrolling="no" style="border:0;display:block;background:#fff"></iframe>
         </div>
       </details>`;
     requestAnimationFrame(scaleResumePreview);
+    document.getElementById("g_fullscreen")?.addEventListener("click", () => showResumeFullscreen(v.generated_html));
   }
 
   const fname = () => {
@@ -5244,6 +5447,30 @@ function scaleResumePreview() {
   apply();
   // Content height isn't known until the srcdoc finishes parsing — re-measure on load.
   frame.addEventListener("load", apply, { once: true });
+}
+
+// Full-screen resume preview overlay (#17). Scales the A4 doc to fit the viewport width; scrolls vertically.
+function showResumeFullscreen(html) {
+  if (!html) { showToast("Generate the resume first"); return; }
+  const ov = document.createElement("div");
+  ov.className = "resume-fs";
+  ov.innerHTML = `<div class="resume-fs-bar"><button class="btn ghost" id="rfs_close">✕ Close</button></div><div class="resume-fs-body"><iframe id="rfs_frame" scrolling="no" title="Resume full screen"></iframe></div>`;
+  document.body.appendChild(ov);
+  const frame = ov.querySelector("#rfs_frame");
+  const body = ov.querySelector(".resume-fs-body");
+  frame.srcdoc = injectPrintReset(html);
+  const fit = () => {
+    const DOC_W = 794;
+    let h = 1123;
+    try { const d = frame.contentDocument; if (d && d.body) h = Math.max(d.body.scrollHeight, d.documentElement.scrollHeight, 200); } catch (e) {}
+    const scale = Math.min(1, (body.clientWidth - 4) / DOC_W);
+    frame.style.width = DOC_W + "px";
+    frame.style.height = h + "px";
+    frame.style.zoom = scale;
+  };
+  frame.addEventListener("load", fit, { once: true });
+  setTimeout(fit, 60);
+  ov.querySelector("#rfs_close").addEventListener("click", () => ov.remove());
 }
 
 // CSS that suppresses Safari's print headers/footers (date, URL, page numbers)
@@ -5527,6 +5754,7 @@ document.getElementById("s_balance").addEventListener("input", e => {
 });
 document.getElementById("settings_back_btn").addEventListener("click", showSettingsMenu);
 document.getElementById("settings_exit_btn").addEventListener("click", () => showTab(lastMainView || "batches"));
+document.getElementById("s_theme").addEventListener("change", e => { setTheme(e.target.value); showToast(THEME_LABELS[e.target.value], 1300); });
 document.getElementById("s_template_new_btn").addEventListener("click", () => editTemplate(null));
 document.getElementById("s_template_save_btn").addEventListener("click", () => {
   const id = document.getElementById("s_template_save_btn").dataset.id;
@@ -5638,9 +5866,13 @@ function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", effective);
   const sun = document.getElementById("themeIconLight");
   const moon = document.getElementById("themeIconDark");
-  if (sun && moon) {
-    sun.style.display = effective === "dark" ? "none" : "block";
-    moon.style.display = effective === "dark" ? "block" : "none";
+  const auto = document.getElementById("themeIconAuto");
+  const isAuto = theme === "system" || !theme;
+  if (sun && moon && auto) {
+    // In auto mode show the distinct "system" icon; otherwise reflect the effective light/dark theme.
+    auto.style.display = isAuto ? "block" : "none";
+    sun.style.display = !isAuto && effective !== "dark" ? "block" : "none";
+    moon.style.display = !isAuto && effective === "dark" ? "block" : "none";
   }
 }
 
@@ -5651,15 +5883,18 @@ function loadTheme() {
 function setTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
   applyTheme(theme);
+  syncThemeSelect();
 }
+// Keep the Settings → Appearance dropdown in sync with the current theme choice.
+function syncThemeSelect() { const el = document.getElementById("s_theme"); if (el) el.value = loadTheme(); }
+const THEME_LABELS = { light: "Light mode", dark: "Dark mode", system: "Auto (follows system)" };
 
 document.getElementById("themeBtn").addEventListener("click", () => {
   const cur = loadTheme();
-  // Cycle: system → light → dark → system. But simpler: just toggle light/dark.
-  const effective = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
-  const next = effective === "dark" ? "light" : "dark";
+  // Cycle: light → dark → auto(system) → light
+  const next = cur === "light" ? "dark" : cur === "dark" ? "system" : "light";
   setTheme(next);
-  showToast(next === "dark" ? "Dark mode" : "Light mode", 1200);
+  showToast(THEME_LABELS[next], 1300);
 });
 
 // Initial theme
@@ -5914,7 +6149,10 @@ function hideLock() {
 // ============================================================================
 bindSetupInputs();
 relocateResumeSubtabs();   // move criteria + templates cards into the Resumes sub-tab panels
-initSubtabs(document.querySelector('.subtabs[data-subtab-group="resumes"]'));
+// Pre-seed the resumes sub-tab from a deep link so the initial init doesn't clobber it before route() runs.
+const _rsub = (location.hash || "").match(/^#\/resumes\/([^/]+)/);
+if (_rsub) subtabState["resumes"] = decodeURIComponent(_rsub[1]);
+initSubtabs(document.querySelector('.subtabs[data-subtab-group="resumes"]'), { hashFor: k => location.hash.startsWith("#/resumes") ? "#/resumes/" + k : null });
 route();   // apply the initial view from location.hash (defaults to #/batches)
 updateCostCounter();
 setSyncIndicator(state.settings?.last_synced_at ? "synced" : "off");
