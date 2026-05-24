@@ -1039,6 +1039,18 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
       <div class="row"><div class="col"><label>Set name</label><input type="text" id="crit_name" placeholder="e.g. Old-fashioned enterprise"></div></div>
     </div>
     <div class="card">
+      <h3 style="margin:0 0 4px">Target persona</h3>
+      <p class="small muted" style="margin:0 0 10px">Notes describing what a good-fit company/role looks like for this set — used by the LLM for nuanced "is this a fit?" judgments and to tailor application &amp; interview answers. Add notes over time, then generate an AI summary to distill them.</p>
+      <div class="flex-between" style="margin-bottom:8px">
+        <span style="font-weight:600">AI summary</span>
+        <button class="btn ghost" id="c_persona_summary_btn" style="padding:6px 10px">Generate (~$0.005)</button>
+      </div>
+      <div id="c_persona_summary" style="margin-bottom:12px"></div>
+      <textarea id="c_persona_new_note" placeholder="e.g. Prefers established Canadian enterprises; avoid crypto/web3 &amp; ad-tech; values FE-heavy product teams with stable footing." style="min-height:60px"></textarea>
+      <div class="row" style="margin-top:6px"><button class="btn" id="c_persona_add_note">Add note</button></div>
+      <div id="c_persona_notes_list" style="margin-top:12px"></div>
+    </div>
+    <div class="card">
       <h3>Must-haves</h3>
       <div class="row">
         <div class="col">
@@ -1094,9 +1106,6 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <div class="card">
       <h3>Target companies (boost only — non-blocking)</h3>
       <div class="chips" id="c_target_companies"></div>
-      <div class="row" style="margin-top:10px">
-        <div class="col"><label>Target persona (used by LLM for nuanced "is this a fit?" judgments)</label><textarea id="c_target_persona" style="min-height:60px"></textarea></div>
-      </div>
     </div>
     <div class="row" style="margin-bottom:20px"><button class="btn" id="crit_done_btn">Done</button></div>
   </div>
@@ -1387,7 +1396,7 @@ const BASE_CRITERIA = {
 function cloneObj(o) { return JSON.parse(JSON.stringify(o)); }
 // Three starter variants the user can edit/rename/delete.
 function makeCriteriaSets() {
-  return [
+  const sets = [
     { id: "crit_enterprise", name: "Old-fashioned enterprise", ...cloneObj(BASE_CRITERIA),
       target_companies: ["CAA","Sun Life","Manulife","Metrolinx","Canada Post","Torstar","Loblaws","Canadian Tire","RBC","TD","BMO","Scotiabank","CIBC","OMERS","OTPP","Ontario Government","Hydro One","Rogers","Bell","Telus"],
       target_persona: "Old-fashioned, established, financially stable Canadian enterprise: banks, insurance, telco, retail, transit, healthcare, public sector. Avoid hyper-growth startups, ad-tech, crypto/web3, gambling." },
@@ -1398,6 +1407,8 @@ function makeCriteriaSets() {
       target_companies: [],
       target_persona: "Early-to-growth-stage startups (seed to Series B). Higher risk/reward, smaller teams, broader scope. Still avoid on-call-heavy / 24-7 production-support roles." }
   ];
+  // Seed each set's persona notes from its starter persona text so the notes-based persona works out of the box.
+  return sets.map(cs => ({ ...cs, notes: cs.target_persona ? [{ id: "n_seed_" + Math.random().toString(36).slice(2, 8), at: nowISO(), text: cs.target_persona, source: "seed" }] : [], ai_summary: "", ai_summary_at: "" }));
 }
 
 const LS_KEY = "phone_screen_app_v1";
@@ -1517,6 +1528,15 @@ function loadState() {
         if (!Array.isArray(cs.kw_excluded)) cs.kw_excluded = [];
         if (!Array.isArray(cs.co_excluded)) cs.co_excluded = [];
         if (!cs.name) cs.name = "Untitled set";
+        // Target persona is now a notes-based knowledge base (notes + on-demand AI summary).
+        // Migrate the legacy single-field persona into a seed note once (when notes is first created).
+        if (!Array.isArray(cs.notes)) {
+          cs.notes = [];
+          const seedP = (cs.target_persona || "").trim();
+          if (seedP) cs.notes.push({ id: "n_seed_" + Math.random().toString(36).slice(2, 8), at: nowISO(), text: seedP, source: "seed" });
+        }
+        if (typeof cs.ai_summary !== "string") cs.ai_summary = "";
+        if (typeof cs.ai_summary_at !== "string") cs.ai_summary_at = "";
       });
       if (s.resumes?.versions) s.resumes.versions.forEach(v => {
         if (typeof v.template !== "string") v.template = "";
@@ -1926,6 +1946,17 @@ function upsertCompanyNote(company, jobId, stageId, text, label) {
   if (idx >= 0) { company.notes[idx].text = body; company.notes[idx].at = nowISO(); }
   else company.notes.push({ id: "iv_" + jobId + "_" + stageId, at: nowISO(), text: body, source: "interview", job_id: jobId, stage_id: stageId });
   company.updated_at = nowISO();
+}
+
+// Best-available "target persona" context for a criteria set, fed to AI features (screening
+// fit, application answers, interview answers): prefer the on-demand AI summary, else the raw
+// persona notes joined, else the legacy single-field persona. "" when nothing is defined.
+function personaContext(cs) {
+  if (!cs) return "";
+  if ((cs.ai_summary || "").trim()) return cs.ai_summary.trim();
+  const notes = (cs.notes || []).map(n => (n.text || "").trim()).filter(Boolean);
+  if (notes.length) return notes.join("\n\n");
+  return (cs.target_persona || "").trim();
 }
 
 // Compact candidate biography context for AI prompts; "" when no bios are set.
@@ -2607,6 +2638,7 @@ updateCommentBadge();
 // SETUP view
 // ============================================================================
 let editingCriteria = null; // the criteria set currently open in the edit form
+let criteriaEditingNoteId = null; // when set, that persona note renders as an inline editable textarea
 
 function renderSetup() {
   // Profile fields only — criteria now lives in its own list/edit flow.
@@ -2636,7 +2668,106 @@ function renderCriteriaForm(c) {
   renderChips("c_kw_excluded", c.kw_excluded, v => { c.kw_excluded = v; saveState(); });
   renderChips("c_co_excluded", c.co_excluded, v => { c.co_excluded = v; saveState(); });
   renderChips("c_target_companies", c.target_companies, v => { c.target_companies = v; saveState(); });
-  document.getElementById("c_target_persona").value = c.target_persona || "";
+  renderCriteriaPersona(c);
+}
+
+// Renders the persona summary block + notes list for the criteria set open in the editor.
+function renderCriteriaPersona(c) {
+  if (!c) return;
+  const sum = document.getElementById("c_persona_summary");
+  const btn = document.getElementById("c_persona_summary_btn");
+  const newNote = document.getElementById("c_persona_new_note");
+  if (newNote) newNote.value = "";
+  if (btn) btn.textContent = ((c.ai_summary || "").trim() ? "Regenerate" : "Generate") + " (~$0.005)";
+  if (sum) {
+    sum.innerHTML = (c.ai_summary || "").trim()
+      ? `<div style="white-space:pre-wrap;line-height:1.5;font-size:12px">${escapeHtml(c.ai_summary)}</div><div class="muted small" style="margin-top:6px">Generated ${escapeHtml((c.ai_summary_at || "").slice(0, 10))} from ${(c.notes || []).length} note(s) · fed into screening, application &amp; interview answers for this set</div>`
+      : `<div class="muted small">No summary yet. Add notes below, then Generate. The summary (or the raw notes if no summary) is used as persona context by the AI features.</div>`;
+  }
+  renderCriteriaNotesList(c);
+}
+
+// Persona notes list with inline edit (like the company / interview-preset notes).
+function renderCriteriaNotesList(c) {
+  const root = document.getElementById("c_persona_notes_list");
+  if (!root) return;
+  const notes = (c.notes || []).slice().reverse();   // newest first
+  if (!notes.length) { root.innerHTML = `<div class="muted small">No notes yet.</div>`; return; }
+  root.innerHTML = notes.map(n => {
+    const meta = `<span class="muted small">${escapeHtml((n.at || "").slice(0, 10))}${n.source === "seed" ? ' · <span class="tag">migrated</span>' : ""}</span>`;
+    if (n.id === criteriaEditingNoteId) {
+      return `<div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+        <div class="flex-between" style="margin-bottom:6px">${meta}</div>
+        <textarea class="cpn_edit_ta" data-id="${escapeHtml(n.id)}" style="min-height:80px">${escapeHtml(n.text)}</textarea>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <button class="btn cpn_save" data-id="${escapeHtml(n.id)}" style="padding:6px 12px">Save</button>
+          <button class="btn ghost cpn_cancel" style="padding:6px 12px">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+      <div class="flex-between" style="margin-bottom:4px">
+        ${meta}
+        <span style="display:flex;gap:4px">
+          <button class="icon-btn small cpn_edit" data-id="${escapeHtml(n.id)}" title="Edit" aria-label="Edit">${ICON_PENCIL}</button>
+          <button class="icon-btn small danger cpn_del" data-id="${escapeHtml(n.id)}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
+        </span>
+      </div>
+      ${noteReadHTML(n.text)}
+    </div>`;
+  }).join("");
+  root.querySelectorAll(".cpn_del").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    if (!confirm("Delete this note?")) return;
+    c.notes = c.notes.filter(x => x.id !== id); criteriaEditingNoteId = null; saveState(); renderCriteriaPersona(c);
+  }));
+  root.querySelectorAll(".cpn_edit").forEach(b => b.addEventListener("click", e => {
+    criteriaEditingNoteId = e.currentTarget.dataset.id;
+    renderCriteriaNotesList(c);
+    const ta = root.querySelector(".cpn_edit_ta");
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }));
+  root.querySelectorAll(".cpn_save").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    const ta = root.querySelector(`.cpn_edit_ta[data-id="${id}"]`);
+    const n = c.notes.find(x => x.id === id); if (!n || !ta) return;
+    const nv = ta.value.trim();
+    if (!nv) c.notes = c.notes.filter(x => x.id !== id);
+    else { n.text = nv; n.at = nowISO(); }
+    criteriaEditingNoteId = null; saveState(); renderCriteriaPersona(c);
+  }));
+  root.querySelectorAll(".cpn_cancel").forEach(b => b.addEventListener("click", () => {
+    criteriaEditingNoteId = null; renderCriteriaNotesList(c);
+  }));
+}
+
+// On-demand AI summary of a criteria set's persona notes (used as context by other AI features).
+async function runCriteriaPersonaSummary(c) {
+  if (!c) return;
+  const notes = (c.notes || []);
+  if (!notes.length) { alert("Add at least one persona note first — the summary is built from your notes."); return; }
+  if (!confirm(`Generate an AI summary of the "${c.name}" target persona from its ${notes.length} note(s)? (~$0.005 via Claude)`)) return;
+  const btn = document.getElementById("c_persona_summary_btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Summarizing…"; }
+  try {
+    const prompt = `You are condensing a job-seeker's accumulated notes about the TARGET PERSONA for one screening criteria set — i.e. what kind of company and role counts as a good fit — into a concise reference the app feeds to other AI features (screening fit judgments, application answers, interview answers). The candidate is a senior frontend engineer in Toronto.
+
+CRITERIA SET: ${c.name}
+
+PERSONA NOTES (chronological):
+${notes.map(n => `- (${(n.at || "").slice(0, 10)}) ${n.text}`).join("\n").slice(0, 6000)}
+
+Write a neutral 3-6 sentence summary capturing: the kind of company/industry/stage that fits, what to avoid (dealbreakers / anti-patterns), role and culture preferences, and any notable nuances. Plain prose — no headings, no bullet points. Return ONLY the summary text.`;
+    const result = await askClaude(prompt, [], 0.005, "haiku", "Persona summary", 800);
+    const text = (typeof result === "string" ? result : (result?.content || result?.text || "")).trim();
+    if (!text) throw new Error("Empty response");
+    c.ai_summary = text; c.ai_summary_at = nowISO();
+    saveState(); renderCriteriaPersona(c);
+    showToast("Persona summary updated");
+  } catch (e) {
+    alert("Summary failed: " + (e.message || e));
+    if (btn) { btn.disabled = false; btn.textContent = ((c.ai_summary || "").trim() ? "Regenerate" : "Generate") + " (~$0.005)"; }
+  }
 }
 
 // Criteria-set list (with edit/delete + active marker)
@@ -2701,6 +2832,7 @@ function renderCriteriaList() {
 
 function showCriteriaListView() {
   editingCriteria = null;
+  criteriaEditingNoteId = null;
   document.getElementById("crit_list_card").style.display = "block";
   document.getElementById("crit_edit_wrap").style.display = "none";
   renderCriteriaList();
@@ -2711,13 +2843,14 @@ function openCriteriaEditor(id) {
   if (!id) {
     // new set
     const newId = "crit_" + Date.now().toString(36);
-    const fresh = { id: newId, name: "New criteria set", ...cloneObj(BASE_CRITERIA), target_companies: [], target_persona: "" };
+    const fresh = { id: newId, name: "New criteria set", ...cloneObj(BASE_CRITERIA), target_companies: [], target_persona: "", notes: [], ai_summary: "", ai_summary_at: "" };
     state.criteria_sets.push(fresh);
     saveState();
     editingCriteria = fresh;
   } else {
     editingCriteria = cs;
   }
+  criteriaEditingNoteId = null;
   document.getElementById("crit_list_card").style.display = "none";
   document.getElementById("crit_edit_wrap").style.display = "block";
   renderCriteriaForm(editingCriteria);
@@ -2757,8 +2890,16 @@ function bindSetupInputs() {
     editingCriteria.min_frontend_percent = v === "" ? null : Math.max(0, Math.min(100, parseInt(v) || 0));
     saveState();
   });
-  document.getElementById("c_target_persona").addEventListener("input", e => {
-    if (editingCriteria) { editingCriteria.target_persona = e.target.value; saveState(); }
+  // Target persona: notes + on-demand AI summary (writes to whichever set is open in the editor).
+  document.getElementById("c_persona_add_note").addEventListener("click", () => {
+    if (!editingCriteria) return;
+    const ta = document.getElementById("c_persona_new_note");
+    if (!ta.value.trim()) return;
+    addCompanyNote(editingCriteria, ta.value, "manual");   // generic note helper (criteria set has the same .notes shape)
+    saveState(); renderCriteriaPersona(editingCriteria);
+  });
+  document.getElementById("c_persona_summary_btn").addEventListener("click", () => {
+    if (editingCriteria) runCriteriaPersonaSummary(editingCriteria);
   });
   // Criteria list buttons
   document.getElementById("crit_new_btn").addEventListener("click", () => openCriteriaEditor(null));
@@ -3213,7 +3354,7 @@ window.generateAllInterviewAnswers = async function(jobId, stageId) {
 async function _runInterviewAnswers(j, stage, questions) {
   const profile = state.profile || {};
   const cs = (typeof criteriaForJob === "function" ? criteriaForJob(j) : null);
-  const persona = cs && cs.target_persona ? cs.target_persona : "";
+  const persona = personaContext(cs);
   const bioBlock = candidateBioBlock(1200);
   const coBlock = companyContextBlock(j, 6);
   const stageBlock = presetContextBlock(stage.name, 6);   // lessons from past interviews of THIS stage type
@@ -3336,6 +3477,7 @@ window.regenerateJobQA = async function(jobId) {
   if (!defaultQs.length) { alert("No default questions configured. Settings → Profile → 'Default application questions'."); return; }
   if (!confirm(`Regenerate AI answers for the ${defaultQs.length} standard questions on this job?\n(Approx cost ~$0.01 via Claude. Your custom Q&A will be preserved.)`)) return;
   const profile = state.profile;
+  const persona = personaContext(criteriaForJob(j));
   const profileBlock = {
     name: profile.full_name, location: profile.location,
     current_role: profile.current_role, target_titles: profile.target_titles,
@@ -3356,7 +3498,7 @@ Location: ${(j.locations || []).join(", ")} (${j.work_arrangement || "?"})
 Tech: ${(j.tech_stack || []).join(", ")}
 Requirements: ${(j.requirements || []).slice(0, 8).join("; ")}
 Interview process: ${(j.interview_process || "—").slice(0, 400)}
-
+${persona ? `\nWHAT THE CANDIDATE IS LOOKING FOR (their target profile for this kind of role — use to frame "why this role / why this company" answers): ${persona}\n` : ""}
 Return ONLY valid JSON: { "qa": [{ "question": "<verbatim question text>", "answer": "<answer>" }, ...] }`;
   try {
     showToast("Regenerating answers…");
@@ -4022,7 +4164,7 @@ function screenJob(job, c) {
 async function aiAssessOneSet(job, cs) {
   const raw = (job.raw_text || "").trim();
   if (raw.length < 50) throw new Error("JD text too short — paste the full posting first");
-  const persona = (cs && cs.target_persona) ? cs.target_persona : "(no target persona defined for this set)";
+  const persona = personaContext(cs) || "(no target persona defined for this set)";
   const bioBlock = candidateBioBlock(1000);
   const coBlock = companyContextBlock(job, 6);
   const prompt = `You assess how well a job matches a candidate's specific search profile. Focus on NUANCE a keyword filter misses: company type & culture, role substance, true seniority, and alignment with the target profile below. The candidate is a senior frontend engineer in Toronto who prefers stable, remote-friendly employers and avoids on-call / heavy production-support roles.
@@ -5532,6 +5674,7 @@ async function runBatchAnalyzer(b) {
       professional_biography: (profile.prof_bio_text || "").slice(0, 2000)
     };
     const defaultQs = state.settings.default_questions || [];
+    const persona = personaContext(b.criteria_id ? criteriaById(b.criteria_id) : activeCriteria());
     const prompt = `You are helping Jerry Lau, a senior frontend engineer based in Toronto, prepare application packets for a batch of qualified jobs.
 
 For EACH job in the batch, generate a tailored answer to EACH of these standard questions (2-4 sentences each, neutral professional tone, no exclamation marks). Always include all of them. Personalize per job (mention the company, tie to JD when relevant).
@@ -5545,7 +5688,7 @@ ALSO generate batch-wide analysis: top 10 requirements across the batch and top 
 
 JERRY PROFILE:
 ${JSON.stringify(profileBlock, null, 2)}
-
+${persona ? `\nWHAT JERRY IS LOOKING FOR (target profile for this batch — use to frame "why this role / why this company" answers): ${persona}\n` : ""}
 JOB BATCH (${jobs.length} jobs):
 ${jobs.map(j => {
   const customQs = customQsPerJob.find(c => c.id === j.id)?.qs || [];
