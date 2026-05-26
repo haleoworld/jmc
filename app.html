@@ -414,6 +414,7 @@ details summary { cursor: pointer; padding: 6px 0; font-size: 13px; color: var(-
 .sheet { width: 100%; max-width: 460px; background: var(--card); border: 1px solid var(--line); border-bottom: 0; border-radius: 18px 18px 0 0; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); box-shadow: var(--shadow-lg); animation: sheetUp .2s ease; }
 .sheet-title { font-weight: 700; font-size: 13px; padding: 8px 8px 10px; color: var(--muted); }
 .sheet-btn { display: block; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 12px; padding: 14px; font: inherit; font-size: 16px; color: var(--fg); cursor: pointer; }
+.sheet-btn .sheet-sub { display: block; font-size: 12px; font-weight: 400; color: var(--muted); margin-top: 3px; }
 @media (hover: hover) { .sheet-btn:hover { background: var(--hover); } }
 .sheet-btn.cancel { color: var(--muted); margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0; }
 @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
@@ -888,6 +889,12 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <button class="fab" id="b_fab" aria-label="Add" title="Add a job or a batch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
+    <div class="row" style="gap:6px;align-items:center;margin-bottom:10px">
+      <input type="search" id="b_search_input" placeholder="Search all jobs by title, company, location…" autocomplete="off" enterkeyhint="search" style="flex:1 1 auto">
+      <button class="icon-btn" id="b_search_btn" title="Search jobs" aria-label="Search jobs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      </button>
+    </div>
     <div class="row" style="gap:8px;align-items:center;margin-bottom:10px">
       <label style="margin:0;flex:0 0 auto;font-size:13px;color:var(--muted)">Criteria set</label>
       <select id="b_filter_criteria" title="Filter batches by criteria set" style="flex:1 1 auto;max-width:280px"></select>
@@ -899,7 +906,28 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   </div>
   <div id="b_detail_view" style="display:none">
     <button class="btn ghost" id="b_back_btn" style="margin-bottom:10px">← Back to all batches</button>
+    <div class="row" style="gap:6px;align-items:center;margin-bottom:10px">
+      <input type="search" id="bd_search_input" placeholder="Search all jobs by title, company, location…" autocomplete="off" enterkeyhint="search" style="flex:1 1 auto">
+      <button class="icon-btn" id="bd_search_btn" title="Search jobs" aria-label="Search jobs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      </button>
+    </div>
     <div id="b_detail"></div>
+  </div>
+</section>
+
+<!-- ========== SEARCH RESULTS (jobs matching a keyword, across all jobs) ========== -->
+<section class="view" data-view="search">
+  <button class="btn ghost" id="srch_back_btn" style="margin-bottom:10px">← Back</button>
+  <div class="row" style="gap:6px;align-items:center;margin-bottom:10px">
+    <input type="search" id="srch_input" placeholder="Search all jobs by title, company, location…" autocomplete="off" enterkeyhint="search" style="flex:1 1 auto">
+    <button class="icon-btn" id="srch_btn" title="Search jobs" aria-label="Search jobs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+    </button>
+  </div>
+  <div class="muted small" id="srch_meta" style="margin-bottom:8px"></div>
+  <div class="card" id="srch_card">
+    <div id="srch_list"></div>
   </div>
 </section>
 
@@ -1432,6 +1460,24 @@ function activeCriteria() {
   return cs;
 }
 function criteriaById(id) { return (state.criteria_sets || []).find(c => c.id === id); }
+// A batch's display name: the user-given name if set, else its id (e.g. "batch_004").
+function batchDisplayName(b) { return (b && (b.name || "").trim()) || (b ? b.id : ""); }
+// Short "Mon D" creation date for a batch (empty string if missing/invalid).
+function batchDateShort(b) {
+  const d = b && b.created_at ? new Date(b.created_at) : null;
+  if (!d || isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+// Secondary line for batch pickers: criteria set · date — N job(s) (no name).
+function batchPickerSub(b) {
+  const cs = (criteriaById(b.criteria_id) || {}).name || "no set";
+  const bits = [cs];
+  const date = batchDateShort(b);
+  if (date) bits.push(date);
+  return `${bits.join(" · ")} — ${b.job_ids.length} job(s)`;
+}
+// Single-line label (name · criteria · date — N job(s)) — used in the text-only destination prompt.
+function batchPickerLabel(b) { return `${batchDisplayName(b)} · ${batchPickerSub(b)}`; }
 // The criteria a given job should be screened against: its batch's set if batched, else the active set.
 function criteriaForJob(j) {
   if (j && j.batch_id) {
@@ -1577,6 +1623,8 @@ function loadState() {
           ];
         }
       }
+      // Batches: optional user-given display name (shown in pickers/lists alongside the id)
+      if (Array.isArray(s.batches)) s.batches.forEach(b => { if (typeof b.name !== "string") b.name = ""; });
       // Per-page comment threads (feedback / requests / improvements)
       if (!s.comments || typeof s.comments !== "object") s.comments = {};
       ["queue", "batches", "resumes", "dashboard", "settings"].forEach(p => { if (!Array.isArray(s.comments[p])) s.comments[p] = []; });
@@ -2106,7 +2154,7 @@ const VIEW_TO_TAB = { queue: "batches", batches: "batches", resumes: "resumes", 
 // Low-level: render a top-level view in place. Does NOT touch the URL. The router calls this.
 function applyTab(name) {
   currentView = name;
-  if (name !== "settings") lastMainView = name;
+  if (name !== "settings" && name !== "search") lastMainView = name;
   const tab = VIEW_TO_TAB[name] || null;
   document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll("section.view").forEach(v => v.classList.toggle("active", v.dataset.view === name));
@@ -2140,6 +2188,7 @@ function route() {
       if (parts[1]) { applyJobDetail(decodeURIComponent(parts[1]), parts[2]); return; }
       break;
     case "add":       applyTab("queue"); showIntakeView(); return;   // job-intake form (lives in the queue section)
+    case "search":    applyTab("search"); renderSearch(parts[1] ? decodeURIComponent(parts[1]) : ""); return;
     case "queue":     applyTab("queue"); return;
     case "setup":     // Setup page (criteria / resume / templates / companies)
     case "resumes":   applyTab("resumes"); if (parts[1]) setSubtab("resumes", parts[1]); return;   // "resumes" kept as a back-compat alias
@@ -2234,7 +2283,7 @@ function relocateResumeSubtabs() {
 function showActionSheet(title, options) {
   const overlay = document.createElement("div");
   overlay.className = "sheet-overlay";
-  overlay.innerHTML = `<div class="sheet" role="dialog" aria-label="${escapeHtml(title)}"><div class="sheet-title">${escapeHtml(title)}</div>${options.map((o, i) => `<button class="sheet-btn" data-i="${i}">${escapeHtml(o.label)}</button>`).join("")}<button class="sheet-btn cancel" data-cancel="1">Cancel</button></div>`;
+  overlay.innerHTML = `<div class="sheet" role="dialog" aria-label="${escapeHtml(title)}"><div class="sheet-title">${escapeHtml(title)}</div>${options.map((o, i) => `<button class="sheet-btn" data-i="${i}">${escapeHtml(o.label)}${o.sub ? `<span class="sheet-sub">${escapeHtml(o.sub)}</span>` : ""}</button>`).join("")}<button class="sheet-btn cancel" data-cancel="1">Cancel</button></div>`;
   const close = () => overlay.remove();
   overlay.addEventListener("click", e => {
     if (e.target === overlay || e.target.dataset.cancel) { close(); return; }
@@ -3539,6 +3588,11 @@ window.addCustomQA = function(jobId) {
   showToast("Custom Q&A added");
 };
 
+// The most recent Claude FE/BE estimate produced from the INTAKE breakdown card (which has no
+// saved job to attach to yet). buildJobFromIntake reads this and attaches it to the new job.
+// Shape: { est, raw } so we only attach it when it was computed for the job's actual JD text.
+let pendingIntakeFeEstimate = null;
+
 // Global handler called from the breakdown card's button
 window.getClaudeFeEstimate = async function(cardId) {
   const raw = window.__feBreakdownTexts?.[cardId] || "";
@@ -3564,8 +3618,10 @@ ${raw.slice(0, 6000)}
     const est = { fe_percent: data.fe_percent, rationale: data.rationale || "", at: nowISO() };
     const jobId = window.__feBreakdownJobs?.[cardId] || null;
     const applyTo = window.__feBreakdownApply?.[cardId] || "field";
-    // Persist on the job so it stays on the job page for future reference
+    // Persist on the job so it stays on the job page for future reference. During intake the job
+    // doesn't exist yet, so stash it — buildJobFromIntake attaches it to the new job on save.
     if (jobId) { const j = state.jobs.find(x => x.id === jobId); if (j) { j.fe_claude = est; saveState(); } }
+    else { pendingIntakeFeEstimate = { est, raw }; }
     resultDiv.innerHTML = claudeFeEstimateHTML(est, { jobId, applyTo });
   } catch (e) {
     resultDiv.innerHTML = `<div class="notice error" style="margin:0">Failed: ${escapeHtml(e.message)}</div>`;
@@ -3852,6 +3908,7 @@ Return JSON only.`;
 });
 
 document.getElementById("j_clear_btn").addEventListener("click", () => {
+  pendingIntakeFeEstimate = null;
   document.getElementById("j_url").value = "";
   document.getElementById("j_raw").value = "";
   document.getElementById("j_posted_date").value = "";
@@ -3876,6 +3933,7 @@ function showIntakeView() {
   document.getElementById("q_intake_view").style.display = "block";
   document.getElementById("q_detail_view").style.display = "none";
   // Reset form
+  pendingIntakeFeEstimate = null;
   document.getElementById("j_url").value = "";
   document.getElementById("j_raw").value = "";
   document.getElementById("j_posted_date").value = "";
@@ -3893,7 +3951,7 @@ function backToQueueFromIntake() {
 // Create an empty draft batch and return it (used by Add-batch and Add-job destination).
 function createEmptyBatch() {
   const id = "batch_" + String(state.nextBatchId++).padStart(3, "0");
-  const batch = { id, created_at: nowISO(), status: "draft", job_ids: [], resume_version_id: null, analysis: null, criteria_id: state.active_criteria_id, submitted_at: null };
+  const batch = { id, name: "", created_at: nowISO(), status: "draft", job_ids: [], resume_version_id: null, analysis: null, criteria_id: state.active_criteria_id, submitted_at: null };
   state.batches.push(batch);
   saveState();
   return batch;
@@ -3911,7 +3969,7 @@ function chooseDestinationForJob(job, defaultBatchId) {
     }
     return null;
   }
-  const lines = candidates.map((b, i) => `${i + 1}. ${b.id} — ${b.job_ids.length} job(s), ${b.status}`).join("\n");
+  const lines = candidates.map((b, i) => `${i + 1}. ${batchPickerLabel(b)}`).join("\n");
   const defIdx = defaultBatchId ? candidates.findIndex(b => b.id === defaultBatchId) : -1;
   const choice = prompt(`Where should "${job.title}" go?\n\n0. Leave in Unbatched\n${lines}\n\nEnter a number:`, defIdx >= 0 ? String(defIdx + 1) : "0");
   if (choice === null) return null;
@@ -3976,6 +4034,12 @@ function buildJobFromIntake({ urlOnly = false } = {}) {
     notes: ""
   };
   linkJobToCompany(job);   // auto-match by name → else auto-create (overridable via Edit)
+  // Carry over a Claude FE/BE estimate produced during intake (the intake breakdown card had no
+  // job to attach to yet) — but only if it was computed for this job's actual JD text.
+  if (pendingIntakeFeEstimate && pendingIntakeFeEstimate.est && pendingIntakeFeEstimate.raw === job.raw_text) {
+    job.fe_claude = pendingIntakeFeEstimate.est;
+  }
+  pendingIntakeFeEstimate = null;
   // Only run screening if there's substantive content
   if ((job.raw_text && job.raw_text.length > 50) || job.tech_stack.length || job.requirements.length) {
     rescreenJob(job, state.active_criteria_id);
@@ -4157,6 +4221,28 @@ function screenJob(job, c) {
   };
 }
 
+// ---- Screening (Qualified/Rejected) badge ----------------------------------
+// The badge LABEL still comes from the deterministic keyword gate (qualified/rejected).
+// The % prefers Claude's AI fit headline (best-scoring set) when the job has one; otherwise it
+// falls back to the deterministic keyword score. Used everywhere the badge appears so it stays
+// consistent across the app.
+function screeningBadgePct(j) {
+  if (j && j.ai_fit && j.ai_fit.score != null) return j.ai_fit.score;
+  if (j && j.screening && j.screening.score != null) return j.screening.score;
+  return null;
+}
+function screeningBadgeHTML(j) {
+  const qualified = !!(j && j.screening && j.screening.qualified);
+  const pct = screeningBadgePct(j);
+  const usingAi = !!(j && j.ai_fit && j.ai_fit.score != null);
+  const pctStr = pct != null ? ` ${pct}%` : "";
+  const label = qualified ? "Qualified" : "Rejected";
+  const title = pct != null
+    ? `${label} (keyword gate) · ${pct}% from ${usingAi ? "Claude AI fit" : "keyword score"}`
+    : `${label} (keyword gate)`;
+  return `<span class="tag ${qualified ? "qualified" : "rejected"}" title="${escapeHtml(title)}">${label}${pctStr}</span>`;
+}
+
 // ============================================================================
 // AI FIT — qualitative judgment (persona/culture/nuance) the keyword screen can't do
 // ============================================================================
@@ -4284,10 +4370,7 @@ function renderQueue() {
     card.dataset.jobId = j.id;
     const isBatchable = j.status === "queued";
     const target = (j.screening?.target_match || []).length ? `<span class="tag target">${escapeHtml(j.screening.target_match[0])}</span>` : "";
-    const scorePct = j.screening && j.screening.score != null ? ` ${j.screening.score}%` : "";
-    const screening = j.screening?.qualified
-      ? `<span class="tag qualified">Qualified${scorePct}</span>`
-      : `<span class="tag rejected">Rejected${scorePct}</span>`;
+    const screening = screeningBadgeHTML(j);
     const fits = fitsSets(j);
     const best = bestFitSet(j);
     const saQ = j.screening_all || {};
@@ -4471,10 +4554,7 @@ function renderJobDetail(j, editMode) {
   const root = document.getElementById("q_detail");
   const screening = j.screening || { qualified: false, reasons_pass: [], reasons_fail: [], target_match: [] };
   const target = (screening.target_match || []).length ? `<span class="tag target">${escapeHtml(screening.target_match[0])}</span>` : "";
-  const screenPct = screening && screening.score != null ? ` ${screening.score}%` : "";
-  const screenTag = screening.qualified
-    ? `<span class="tag qualified">Qualified${screenPct}</span>`
-    : `<span class="tag rejected">Rejected${screenPct}</span>`;
+  const screenTag = screeningBadgeHTML(j);
   const salary = j.salary_min ? `${(j.salary_min/1000).toFixed(0)}–${j.salary_max ? (j.salary_max/1000).toFixed(0) : "?"}k ${j.currency || "CAD"}` : "—";
   const fePct = j.fe_percent != null ? `${j.fe_percent}%` : "unknown";
   // Per-criteria-set qualification summary (which set to assign this job to)
@@ -4882,7 +4962,7 @@ function renderBatches() {
     card.dataset.batchId = b.id;
     card.innerHTML = `
       <div class="grow">
-        <div>${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></div>
+        <div>${escapeHtml(batchDisplayName(b))} <span class="tag ${b.status}">${escapeHtml(b.status)}</span>${b.name ? ` <span class="muted small">${escapeHtml(b.id)}</span>` : ""}</div>
         <div class="muted small">${jobs.length} job(s) · ${submitted} submitted · ${screens} phone screen(s) · Resume: ${escapeHtml(b.resume_version_id || "not set")}</div>
         <div class="muted small">Criteria: ${escapeHtml((criteriaById(b.criteria_id) || {}).name || "not set")}</div>
       </div>
@@ -5021,8 +5101,8 @@ function applyBatchDetail(batchId, sub) {
     <div class="card" id="b_header_card">
       <div class="flex-between" style="align-items:flex-start;gap:8px">
         <div class="grow" style="min-width:0">
-          <h3 style="margin:0">${escapeHtml(b.id)} <span class="tag ${b.status}">${escapeHtml(b.status)}</span></h3>
-          <div id="b_settings_summary" class="muted small" style="margin-top:4px;display:${batchHeaderCollapsed ? "block" : "none"}">${escapeHtml(critName)} · resume ${escapeHtml(resumeName)} · ${jobs.length} job(s)</div>
+          <h3 style="margin:0"><span id="b_title_name">${escapeHtml(batchDisplayName(b))}</span> <span class="tag ${b.status}">${escapeHtml(b.status)}</span></h3>
+          <div id="b_settings_summary" class="muted small" style="margin-top:4px;display:${batchHeaderCollapsed ? "block" : "none"}">${b.name ? escapeHtml(b.id) + " · " : ""}${escapeHtml(critName)} · resume ${escapeHtml(resumeName)} · ${jobs.length} job(s)</div>
         </div>
         <button class="icon-btn" id="b_settings_toggle" aria-expanded="${!batchHeaderCollapsed}" title="Show/hide batch settings" aria-label="Show/hide batch settings">
           <svg id="b_settings_chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transition:transform .15s;transform:rotate(${batchHeaderCollapsed ? 0 : 180}deg)"><path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
@@ -5030,6 +5110,11 @@ function applyBatchDetail(batchId, sub) {
       </div>
       <div id="b_settings_body" style="display:${batchHeaderCollapsed ? "none" : "block"}">
         <div class="row" style="align-items:flex-end;gap:10px;margin-top:10px">
+          <div class="col" style="flex:1 1 auto"><label>Batch name <span class="muted" style="font-weight:400">(optional — helps tell batches apart)</span></label>
+            <input id="b_name_input" type="text" placeholder="${escapeHtml(b.id)}" value="${escapeHtml(b.name || "")}" maxlength="60">
+          </div>
+        </div>
+        <div class="row" style="align-items:flex-end;gap:10px;margin-top:8px">
           <div class="col" style="flex:1 1 auto"><label>Batch status</label>
             <select id="b_status_sel">${statusOptions}</select>
           </div>
@@ -5104,6 +5189,13 @@ function applyBatchDetail(batchId, sub) {
     </div>
   `;
 
+  const bNameInput = document.getElementById("b_name_input");
+  if (bNameInput) bNameInput.addEventListener("input", e => {
+    b.name = e.target.value;
+    const titleEl = document.getElementById("b_title_name");
+    if (titleEl) titleEl.textContent = batchDisplayName(b);
+    saveState();
+  });
   document.getElementById("b_status_sel").addEventListener("change", e => {
     b.status = e.target.value;
     if (b.status === "submitted" && !b.submitted_at) b.submitted_at = nowISO();
@@ -5248,6 +5340,79 @@ function renderBatchResume(b) {
 
 document.getElementById("b_back_btn").addEventListener("click", () => showTab("batches"));
 
+// ============================================================================
+// Job search — global keyword search across ALL jobs. Matches job title,
+// company, and location. Launched from the batch list, a batch page, or the
+// results page itself; navigates to #/search/<query> and lists matching jobs.
+// ============================================================================
+function submitJobSearch(inputEl) {
+  const q = ((inputEl && inputEl.value) || "").trim();
+  if (!q) { showToast("Type a keyword to search."); if (inputEl) inputEl.focus(); return; }
+  navigate("#/search/" + encodeURIComponent(q));
+}
+
+// Lower-cased text we match keywords against (title + company + location).
+function jobSearchHaystack(j) {
+  return [j.title || "", j.company || "", (j.locations || []).join(" ")].join(" ").toLowerCase();
+}
+
+// Render the results page for a query. AND-of-terms: every whitespace-separated
+// term must appear somewhere in the haystack (so "senior toronto" narrows).
+function renderSearch(query) {
+  const q = (query || "").trim();
+  const input = document.getElementById("srch_input");
+  if (input && document.activeElement !== input) input.value = q;
+  const meta = document.getElementById("srch_meta");
+  const list = document.getElementById("srch_list");
+  if (!list) return;
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = terms.length
+    ? state.jobs.filter(j => { const hay = jobSearchHaystack(j); return terms.every(t => hay.includes(t)); }).reverse()
+    : [];
+  if (meta) meta.textContent = q
+    ? `${matches.length} result${matches.length === 1 ? "" : "s"} for "${q}"`
+    : "Type a keyword above to search all jobs.";
+  if (!q) { list.innerHTML = ""; return; }
+  if (!matches.length) {
+    list.innerHTML = `<div class="muted small" style="text-align:center;padding:20px">No jobs match "${escapeHtml(q)}". Search covers job title, company, and location.</div>`;
+    return;
+  }
+  list.innerHTML = "";
+  matches.forEach(j => {
+    const row = document.createElement("div");
+    row.className = "list-item";
+    row.style.cursor = "pointer";
+    const company = j.company || "?";
+    const loc = (j.locations || []).join(", ");
+    const bObj = j.batch_id ? state.batches.find(b => b.id === j.batch_id) : null;
+    const batch = bObj ? batchDisplayName(bObj) : "Unbatched";
+    const screen = screeningBadgeHTML(j);
+    const metaBits = [escapeHtml(company)];
+    if (loc) metaBits.push(escapeHtml(loc));
+    row.innerHTML = `
+      <div class="grow" style="min-width:0">
+        <div style="font-weight:600">${escapeHtml(j.title || "(untitled)")} <span class="muted small">· ${escapeHtml(j.id)}</span></div>
+        <div class="muted small">${metaBits.join(" · ")}</div>
+        <div class="tags" style="margin-top:4px">
+          ${screen}
+          <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
+          <span class="tag">${escapeHtml(batch)}</span>
+        </div>
+      </div>
+      <span aria-hidden="true" style="font-size:22px;color:var(--muted-2);line-height:1">›</span>`;
+    row.addEventListener("click", () => showJobDetail(j.id));
+    list.appendChild(row);
+  });
+}
+
+// Wire the three search inputs/buttons (batch list, batch detail, results page).
+[["b_search_input", "b_search_btn"], ["bd_search_input", "bd_search_btn"], ["srch_input", "srch_btn"]].forEach(([inId, btnId]) => {
+  const inp = document.getElementById(inId), btn = document.getElementById(btnId);
+  if (inp) inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitJobSearch(inp); } });
+  if (btn) btn.addEventListener("click", () => submitJobSearch(inp));
+});
+document.getElementById("srch_back_btn").addEventListener("click", () => { if (history.length > 1) history.back(); else showTab("batches"); });
+
 function renderBatchAnalysis(b) {
   const card = document.getElementById("b_analysis_card");
   const content = document.getElementById("b_analysis_content");
@@ -5359,8 +5524,7 @@ function renderBatchJobs(b) {
     const color = avatarColor(j.company || "?");
     const statusOpts = ["batched","submitted","phonescreen","onsite","offer","rejected_by_co","withdrawn","ghosted"].map(s => `<option value="${s}" ${j.status === s ? "selected" : ""}>${s}</option>`).join("");
     const qaCount = (j.qa || []).length;
-    const fitPct = j.screening?.score != null ? ` ${j.screening.score}%` : "";
-    const screenTag = j.screening?.qualified ? `<span class="tag qualified">Qualified${fitPct}</span>` : `<span class="tag rejected">Rejected${fitPct}</span>`;
+    const screenTag = screeningBadgeHTML(j);
     const aiTag = j.ai_fit ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">AI ${j.ai_fit.score}%</span>` : "";
     const salary = j.salary_min ? `${(j.salary_min/1000).toFixed(0)}–${j.salary_max ? (j.salary_max/1000).toFixed(0) : "?"}k ${escapeHtml(j.currency || "CAD")}` : "";
     const metaBits = [];
@@ -5508,7 +5672,7 @@ function moveSelectedToBatch(b) {
     showToast(`Moved ${ids.length} job(s) to ${target.id}`, 3000);
     showBatchDetail(b.id);
   };
-  showActionSheet(`Move ${ids.length} job(s) to…`, candidates.map(x => ({ label: `${x.id} — ${x.job_ids.length} job(s), ${x.status}`, onClick: () => moveInto(x) })));
+  showActionSheet(`Move ${ids.length} job(s) to…`, candidates.map(x => ({ label: batchDisplayName(x), sub: batchPickerSub(x), onClick: () => moveInto(x) })));
 }
 
 // Move a single job (from its detail page) into another batch — drawer of destinations (#J-move).
@@ -5543,7 +5707,7 @@ function moveJobToBatch(j) {
       renderJobDetail(j, false);
     } });
   }
-  options.push(...candidates.map(x => ({ label: `${x.id} — ${x.job_ids.length} job(s), ${x.status}`, onClick: () => moveInto(x) })));
+  options.push(...candidates.map(x => ({ label: batchDisplayName(x), sub: batchPickerSub(x), onClick: () => moveInto(x) })));
   showActionSheet(j.batch_id ? `Move from ${j.batch_id} to…` : "Add this job to a batch…", options);
 }
 
