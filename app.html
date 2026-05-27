@@ -940,6 +940,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
       <button class="subtab-head" data-subtab="templates">Templates</button>
       <button class="subtab-head" data-subtab="companies">Companies</button>
       <button class="subtab-head" data-subtab="interviews">Interviews</button>
+      <button class="subtab-head" data-subtab="tone">Tone</button>
     </div>
     <div class="subtab-panels">
 
@@ -996,6 +997,9 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
 
     <!-- Interviews sub-tab — configurable preset interview stages that seed each job's Interview tab -->
     <div class="subtab-panel" data-subtab="interviews" id="rt_panel_interviews"></div>
+
+    <!-- Tone sub-tab — notes about how answers should sound; summary feeds application-answer AI -->
+    <div class="subtab-panel" data-subtab="tone" id="rt_panel_tone"></div>
 
     </div><!-- /.subtab-panels -->
   </div><!-- /.subtabs -->
@@ -1632,6 +1636,12 @@ function loadState() {
       if (!Array.isArray(s.companies)) s.companies = [];
       if (typeof s.nextCompanyId !== "number") s.nextCompanyId = (s.companies.length || 0) + 1;
       s.companies.forEach(c => { if (!Array.isArray(c.notes)) c.notes = []; if (typeof c.norm !== "string") c.norm = normalizeCompanyName(c.name); });
+      // Tone knowledge base — notes about how the candidate wants their answers to sound, plus an
+      // on-demand AI summary; fed into application-answer generation.
+      if (!s.tone || typeof s.tone !== "object") s.tone = { notes: [], ai_summary: "", ai_summary_at: "" };
+      if (!Array.isArray(s.tone.notes)) s.tone.notes = [];
+      if (typeof s.tone.ai_summary !== "string") s.tone.ai_summary = "";
+      if (typeof s.tone.ai_summary_at !== "string") s.tone.ai_summary_at = "";
       // Configurable interview preset stages (objects: name + historical notes + AI summary)
       if (!Array.isArray(s.interview_presets) || !s.interview_presets.length) {
         s.interview_presets = ["Phone screen", "Hiring manager", "Coding", "Final"].map(_mkPreset);
@@ -1701,6 +1711,7 @@ function defaultState() {
     comments: { queue: [], batches: [], resumes: [], dashboard: [], settings: [] },
     companies: [],
     interview_presets: ["Phone screen", "Hiring manager", "Coding", "Final"].map(_mkPreset),
+    tone: { notes: [], ai_summary: "", ai_summary_at: "" },
     nextJobId: 1,
     nextBatchId: 1,
     nextResumeId: 2,
@@ -2005,6 +2016,15 @@ function personaContext(cs) {
   const notes = (cs.notes || []).map(n => (n.text || "").trim()).filter(Boolean);
   if (notes.length) return notes.join("\n\n");
   return (cs.target_persona || "").trim();
+}
+
+// Tone context fed into application-answer generation: prefer the on-demand AI summary, else the
+// raw tone notes joined, else "". Lets the candidate steer how their answers should sound.
+function toneContext() {
+  const t = state.tone || {};
+  if ((t.ai_summary || "").trim()) return t.ai_summary.trim();
+  const notes = (t.notes || []).map(n => (n.text || "").trim()).filter(Boolean);
+  return notes.length ? notes.join("\n\n") : "";
 }
 
 // Compact candidate biography context for AI prompts; "" when no bios are set.
@@ -3597,6 +3617,7 @@ window.regenerateJobQA = async function(jobId) {
   if (!confirm(`Regenerate AI answers for the ${defaultQs.length} standard questions on this job?\n(Approx cost ~$0.01 via Claude. Your custom Q&A will be preserved.)`)) return;
   const profile = state.profile;
   const persona = personaContext(criteriaForJob(j));
+  const tone = toneContext();
   const profileBlock = {
     name: profile.full_name, location: profile.location,
     current_role: profile.current_role, target_titles: profile.target_titles,
@@ -3617,7 +3638,7 @@ Location: ${(j.locations || []).join(", ")} (${j.work_arrangement || "?"})
 Tech: ${(j.tech_stack || []).join(", ")}
 Requirements: ${(j.requirements || []).slice(0, 8).join("; ")}
 Interview process: ${(j.interview_process || "—").slice(0, 400)}
-${persona ? `\nWHAT THE CANDIDATE IS LOOKING FOR (their target profile for this kind of role — use to frame "why this role / why this company" answers): ${persona}\n` : ""}
+${persona ? `\nWHAT THE CANDIDATE IS LOOKING FOR (their target profile for this kind of role — use to frame "why this role / why this company" answers): ${persona}\n` : ""}${tone ? `\nVOICE & TONE (write every answer in this style): ${tone}\n` : ""}
 Return ONLY valid JSON: { "qa": [{ "question": "<verbatim question text>", "answer": "<answer>" }, ...] }`;
   try {
     showToast("Regenerating answers…");
@@ -3689,6 +3710,7 @@ window.aiNewQA = async function(jobId) {
 async function _draftOneQAAnswer(j, questionText) {
   const profile = state.profile;
   const persona = personaContext(criteriaForJob(j));
+  const tone = toneContext();
   const profileBlock = {
     name: profile.full_name, location: profile.location,
     current_role: profile.current_role, target_titles: profile.target_titles,
@@ -3709,7 +3731,7 @@ Location: ${(j.locations || []).join(", ")} (${j.work_arrangement || "?"})
 Tech: ${(j.tech_stack || []).join(", ")}
 Requirements: ${(j.requirements || []).slice(0, 8).join("; ")}
 Interview process: ${(j.interview_process || "—").slice(0, 400)}
-${persona ? `\nWHAT THE CANDIDATE IS LOOKING FOR (their target profile — use to frame "why this role / why this company" answers): ${persona}\n` : ""}`;
+${persona ? `\nWHAT THE CANDIDATE IS LOOKING FOR (their target profile — use to frame "why this role / why this company" answers): ${persona}\n` : ""}${tone ? `\nVOICE & TONE (write the answer in this style): ${tone}\n` : ""}`;
   const result = await askClaude(prompt, [], 0.005, "haiku", "Draft Q&A answer", 700);
   const text = typeof result === "string" ? result : (result?.content || result?.text || "");
   return (text || "").trim();
@@ -5991,6 +6013,7 @@ async function runBatchAnalyzer(b) {
     };
     const defaultQs = state.settings.default_questions || [];
     const persona = personaContext(b.criteria_id ? criteriaById(b.criteria_id) : activeCriteria());
+    const tone = toneContext();
     const prompt = `You are helping Jerry Lau, a senior frontend engineer based in Toronto, prepare application packets for a batch of qualified jobs.
 
 For EACH job in the batch, generate a tailored answer to EACH of these standard questions (2-4 sentences each, neutral professional tone, no exclamation marks). Always include all of them. Personalize per job (mention the company, tie to JD when relevant).
@@ -6004,7 +6027,7 @@ ALSO generate batch-wide analysis: top 10 requirements across the batch and top 
 
 JERRY PROFILE:
 ${JSON.stringify(profileBlock, null, 2)}
-${persona ? `\nWHAT JERRY IS LOOKING FOR (target profile for this batch — use to frame "why this role / why this company" answers): ${persona}\n` : ""}
+${persona ? `\nWHAT JERRY IS LOOKING FOR (target profile for this batch — use to frame "why this role / why this company" answers): ${persona}\n` : ""}${tone ? `\nVOICE & TONE (write every answer in this style): ${tone}\n` : ""}
 JOB BATCH (${jobs.length} jobs):
 ${jobs.map(j => {
   const customQs = customQsPerJob.find(c => c.id === j.id)?.qs || [];
@@ -6183,6 +6206,128 @@ Return ONLY valid JSON:
 // COMPANIES sub-tab (under Setup) — list + in-panel detail
 // ============================================================================
 let companyDetailId = null;   // when set, the Companies panel shows that company's detail
+
+// ---- Tone knowledge base (Setup → Tone) ------------------------------------
+// Notes about how the candidate wants answers to sound + an on-demand AI summary.
+// The summary (or raw notes) is fed into application-answer generation via toneContext().
+let toneEditingNoteId = null;
+
+function renderTone() {
+  const panel = document.getElementById("rt_panel_tone");
+  if (!panel) return;
+  panel.innerHTML = `
+    <div class="notice">Notes about your voice &amp; tone — how you want application answers to read (e.g. "concise and direct", "warm but professional", "no buzzwords"). Add notes over time, then Generate an AI summary. The summary (or the raw notes) is fed into every AI-drafted application answer.</div>
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:8px">
+        <span style="font-weight:600">AI summary</span>
+        <button class="btn ghost" id="tone_summary_btn" style="padding:6px 10px">Generate (~$0.005)</button>
+      </div>
+      <div id="tone_summary" style="margin-bottom:12px"></div>
+      <textarea id="tone_new_note" placeholder="e.g. Keep answers to 2-3 sentences. Confident but not boastful. Avoid clichés like 'passionate' and 'synergy'. Plain, specific language." style="min-height:60px"></textarea>
+      <div class="row" style="margin-top:6px"><button class="btn" id="tone_add_note">Add note</button></div>
+      <div id="tone_notes_list" style="margin-top:12px"></div>
+    </div>`;
+  document.getElementById("tone_add_note").addEventListener("click", () => {
+    const ta = document.getElementById("tone_new_note");
+    if (!ta.value.trim()) return;
+    addCompanyNote(state.tone, ta.value, "manual");   // generic note helper (tone has the same .notes shape)
+    ta.value = ""; saveState(); renderToneNotesList();
+  });
+  document.getElementById("tone_summary_btn").addEventListener("click", runToneSummary);
+  renderToneSummaryBlock();
+  renderToneNotesList();
+}
+
+function renderToneSummaryBlock() {
+  const t = state.tone || {};
+  const sum = document.getElementById("tone_summary");
+  const btn = document.getElementById("tone_summary_btn");
+  if (btn) btn.textContent = ((t.ai_summary || "").trim() ? "Regenerate" : "Generate") + " (~$0.005)";
+  if (sum) {
+    sum.innerHTML = (t.ai_summary || "").trim()
+      ? `<div style="white-space:pre-wrap;line-height:1.5;font-size:12px">${escapeHtml(t.ai_summary)}</div><div class="muted small" style="margin-top:6px">Generated ${escapeHtml((t.ai_summary_at || "").slice(0, 10))} from ${(t.notes || []).length} note(s) · fed into every AI-drafted application answer</div>`
+      : `<div class="muted small">No summary yet. Add notes below, then Generate. The summary (or the raw notes if no summary) steers the tone of AI-drafted application answers.</div>`;
+  }
+}
+
+function renderToneNotesList() {
+  const root = document.getElementById("tone_notes_list");
+  if (!root) return;
+  const notes = (state.tone.notes || []).slice().reverse();   // newest first
+  if (!notes.length) { root.innerHTML = `<div class="muted small">No notes yet.</div>`; return; }
+  root.innerHTML = notes.map(n => {
+    const meta = `<span class="muted small">${escapeHtml((n.at || "").slice(0, 10))}</span>`;
+    if (n.id === toneEditingNoteId) {
+      return `<div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+        <div class="flex-between" style="margin-bottom:6px">${meta}</div>
+        <textarea class="tn_edit_ta" data-id="${escapeHtml(n.id)}" style="min-height:80px">${escapeHtml(n.text)}</textarea>
+        <div class="row" style="gap:6px;margin-top:6px">
+          <button class="btn tn_save" data-id="${escapeHtml(n.id)}" style="padding:6px 12px">Save</button>
+          <button class="btn ghost tn_cancel" style="padding:6px 12px">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="card" style="padding:10px;margin-bottom:8px;background:var(--soft)">
+      <div class="flex-between" style="margin-bottom:4px">
+        ${meta}
+        <span style="display:flex;gap:4px">
+          <button class="icon-btn small tn_edit" data-id="${escapeHtml(n.id)}" title="Edit" aria-label="Edit">${ICON_PENCIL}</button>
+          <button class="icon-btn small danger tn_del" data-id="${escapeHtml(n.id)}" title="Delete" aria-label="Delete">${ICON_TRASH}</button>
+        </span>
+      </div>
+      ${noteReadHTML(n.text)}
+    </div>`;
+  }).join("");
+  root.querySelectorAll(".tn_del").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    if (!confirm("Delete this note?")) return;
+    state.tone.notes = state.tone.notes.filter(x => x.id !== id); toneEditingNoteId = null; saveState(); renderToneNotesList();
+  }));
+  root.querySelectorAll(".tn_edit").forEach(b => b.addEventListener("click", e => {
+    toneEditingNoteId = e.currentTarget.dataset.id;
+    renderToneNotesList();
+    const ta = root.querySelector(".tn_edit_ta");
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }));
+  root.querySelectorAll(".tn_save").forEach(b => b.addEventListener("click", e => {
+    const id = e.currentTarget.dataset.id;
+    const ta = root.querySelector(`.tn_edit_ta[data-id="${id}"]`);
+    const n = state.tone.notes.find(x => x.id === id); if (!n || !ta) return;
+    const nv = ta.value.trim();
+    if (!nv) state.tone.notes = state.tone.notes.filter(x => x.id !== id);
+    else { n.text = nv; n.at = nowISO(); }
+    toneEditingNoteId = null; saveState(); renderToneNotesList();
+  }));
+  root.querySelectorAll(".tn_cancel").forEach(b => b.addEventListener("click", () => {
+    toneEditingNoteId = null; renderToneNotesList();
+  }));
+}
+
+async function runToneSummary() {
+  const t = state.tone || {};
+  const notes = (t.notes || []);
+  if (!notes.length) { alert("Add at least one tone note first — the summary is built from your notes."); return; }
+  if (!confirm(`Generate an AI summary of your tone from ${notes.length} note(s)? (~$0.005 via Claude)`)) return;
+  const btn = document.getElementById("tone_summary_btn");
+  if (btn) { btn.disabled = true; btn.textContent = "Summarizing…"; }
+  try {
+    const prompt = `You are condensing a job-seeker's accumulated notes about their preferred VOICE & TONE for written job-application answers into a concise style guide the app feeds to an AI that drafts those answers. The candidate is a senior frontend engineer in Toronto.
+
+TONE NOTES (chronological):
+${notes.map(n => `- (${(n.at || "").slice(0, 10)}) ${n.text}`).join("\n").slice(0, 6000)}
+
+Write a neutral 3-6 sentence style guide capturing: desired voice and register, sentence length / structure preferences, words or clichés to avoid, and any do's and don'ts. Plain prose — no headings, no bullet points. Return ONLY the summary text.`;
+    const result = await askClaude(prompt, [], 0.005, "haiku", "Tone summary", 800);
+    const text = (typeof result === "string" ? result : (result?.content || result?.text || "")).trim();
+    if (!text) throw new Error("Empty response");
+    state.tone.ai_summary = text; state.tone.ai_summary_at = nowISO();
+    saveState(); renderToneSummaryBlock();
+    showToast("Tone summary updated");
+  } catch (e) {
+    alert("Summary failed: " + (e.message || e));
+    if (btn) { btn.disabled = false; btn.textContent = ((t.ai_summary || "").trim() ? "Regenerate" : "Generate") + " (~$0.005)"; }
+  }
+}
 
 function renderCompanies() {
   const panel = document.getElementById("rt_panel_companies");
@@ -6621,6 +6766,7 @@ function renderResumes() {
   if (typeof renderTemplatesList === "function" && document.getElementById("s_templates_list")) renderTemplatesList();
   if (typeof renderCompanies === "function" && document.getElementById("rt_panel_companies")) renderCompanies();
   if (typeof renderInterviewPresets === "function" && document.getElementById("rt_panel_interviews")) renderInterviewPresets();
+  if (typeof renderTone === "function" && document.getElementById("rt_panel_tone")) renderTone();
 }
 // (Top-level Compare card removed — diff now lives inside the edit form below)
 
