@@ -3101,31 +3101,39 @@ function renderFeBeBreakdownHTML(rawText, opts = {}) {
 
 // =====================================================
 // Per-job Q&A — list of question/answer pairs with copy + edit + add
+// Inline editing state (within the currently-open job; reset on job entry):
+//   qaEditingIdx = index of the answer being edited inline (null = none)
+//   qaAdding     = whether the inline "add custom question" form is shown
 // =====================================================
+let qaEditingIdx = null;
+let qaAdding = false;
 function renderJobQAHTML(j) {
   const profile = state.profile || {};
-  const contactBlock = [
-    `Name: ${profile.full_name || ""}`,
-    `Email: ${profile.email || ""}`,
-    `Mobile: ${profile.mobile || ""}`,
-    `LinkedIn: ${profile.linkedin || ""}`,
-    `Location: ${profile.location || ""}`,
-    profile.work_auth ? `Work authorization: ${profile.work_auth}` : "",
-    profile.notice_period ? `Notice period: ${profile.notice_period}` : ""
-  ].filter(Boolean).join("\n");
+  const copyIcon = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/></svg>`;
+  const contactFields = [
+    ["Name", profile.full_name], ["Email", profile.email], ["Mobile", profile.mobile],
+    ["LinkedIn", profile.linkedin], ["Location", profile.location],
+    ["Work authorization", profile.work_auth], ["Notice period", profile.notice_period]
+  ].filter(([, v]) => v && String(v).trim());
+  const contactBlock = contactFields.map(([k, v]) => `${k}: ${v}`).join("\n");
+  const contactRowsHTML = contactFields.map(([label, value], i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;${i ? "border-top:1px solid var(--line)" : ""}">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">${escapeHtml(label)}</div>
+            <div style="font-size:13px;word-break:break-word">${escapeHtml(String(value))}</div>
+          </div>
+          <button class="icon-btn" onclick="copyText(this, ${JSON.stringify(String(value)).replace(/"/g, '&quot;')})" title="Copy ${escapeHtml(label)}" aria-label="Copy ${escapeHtml(label)}">${copyIcon}</button>
+        </div>`).join("");
 
   const qa = Array.isArray(j.qa) ? j.qa : [];
   let html = `<div class="card">
     <div class="flex-between" style="margin-bottom:8px">
       <h3 style="margin:0">Contact block</h3>
-      <button class="icon-btn" onclick="copyText(this, ${JSON.stringify(contactBlock).replace(/"/g,'&quot;')})" title="Copy contact block" aria-label="Copy contact block">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/></svg>
-      </button>
+      <button class="icon-btn" onclick="copyText(this, ${JSON.stringify(contactBlock).replace(/"/g,'&quot;')})" title="Copy all contact info" aria-label="Copy all contact info">${copyIcon}</button>
     </div>
-    <pre style="white-space:pre-wrap;word-break:break-word;font-size:13px;background:var(--soft);padding:10px;border-radius:10px;margin:0">${escapeHtml(contactBlock)}</pre>
-  </div>
-
-  <div class="card">
+    ${contactRowsHTML}
+  </div>`;
+  html += `<div class="card">
     <div class="flex-between" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <h3 style="margin:0">Application Q&A</h3>
       <div class="row" style="gap:6px;flex:0 0 auto">
@@ -3133,19 +3141,50 @@ function renderJobQAHTML(j) {
         <button class="btn ghost" onclick="addCustomQA('${j.id}')">+ Add question</button>
       </div>
     </div>`;
-  if (!qa.length) {
+  // Inline "add custom question" form (replaces the old prompt() popups).
+  if (qaAdding) {
+    html += `
+      <div class="qa-add" style="border-top:1px solid var(--line);padding:10px 0">
+        <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">New question (from the application form)</label>
+        <textarea id="qa_new_q" rows="2" placeholder="e.g. Why do you want to work here?" style="width:100%"></textarea>
+        <label style="font-size:11px;color:var(--muted);display:block;margin:8px 0 3px">Answer</label>
+        <textarea id="qa_new_a" rows="5" placeholder="Type an answer, or use ✨ AI draft to write one from your profile…" style="width:100%"></textarea>
+        <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+          <button class="btn ghost" id="qa_new_ai" onclick="aiNewQA('${j.id}')">✨ AI draft</button>
+          <button class="btn" onclick="saveNewQA('${j.id}')">Add question</button>
+          <button class="btn ghost" onclick="cancelNewQA('${j.id}')">Cancel</button>
+        </div>
+      </div>`;
+  }
+  if (!qa.length && !qaAdding) {
     html += `<div class="muted small">No Q&A yet. Run <b>Analyze batch</b> from this job's batch, or click <b>+ Add question</b> above to write your own.</div>`;
   } else {
     qa.forEach((item, idx) => {
       const editedTag = item.edited ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">edited</span>` : "";
-      const customTag = item.source === "custom" ? `<span class="tag" style="background:var(--purple-bg);color:var(--purple-fg)">custom</span>` : "";
-      html += `
-        <div class="qa-item" data-job-id="${j.id}" data-idx="${idx}" style="border-top:1px solid var(--line);padding:10px 0">
-          <div style="font-weight:600;font-size:14px;margin-bottom:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      const isCustom = item.source === "custom";
+      const customTag = isCustom ? `<span class="tag" style="background:var(--purple-bg);color:var(--purple-fg)">custom</span>` : "";
+      const questionRow = `<div style="font-weight:600;font-size:14px;margin-bottom:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
             <span style="flex:1;min-width:0">${escapeHtml(item.question)}</span>
             ${customTag}${editedTag}
+          </div>`;
+      if (qaEditingIdx === idx) {
+        // Inline answer editor (textarea + Save/Cancel; AI draft for custom questions).
+        html += `
+        <div class="qa-item" data-job-id="${j.id}" data-idx="${idx}" style="border-top:1px solid var(--line);padding:10px 0">
+          ${questionRow}
+          <textarea id="qa_edit_ta" rows="5" style="width:100%">${escapeHtml(item.answer || "")}</textarea>
+          <div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">
+            ${isCustom ? `<button class="btn ghost" onclick="aiQA('${j.id}', ${idx})" title="Draft this answer with AI (~$0.005)">✨ AI</button>` : ""}
+            <button class="btn" onclick="saveQA('${j.id}', ${idx})">Save</button>
+            <button class="btn ghost" onclick="cancelQA('${j.id}')">Cancel</button>
           </div>
-          <div class="qa-answer-view" style="background:var(--soft);padding:10px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45">${escapeHtml(item.answer || "")}</div>
+        </div>`;
+        return;
+      }
+      html += `
+        <div class="qa-item" data-job-id="${j.id}" data-idx="${idx}" style="border-top:1px solid var(--line);padding:10px 0">
+          ${questionRow}
+          <div class="qa-answer-view" style="background:var(--soft);padding:10px 12px;border-radius:10px;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45">${escapeHtml(item.answer || "") || `<span class="muted">No answer yet${isCustom ? " — Edit to write one, or ✨ AI to draft it." : "."}</span>`}</div>
           <div class="row" style="gap:4px;margin-top:6px">
             <button class="icon-btn" onclick="copyQA('${j.id}', ${idx})" title="Copy answer" aria-label="Copy answer">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"/></svg>
@@ -3153,6 +3192,9 @@ function renderJobQAHTML(j) {
             <button class="icon-btn" onclick="editQA('${j.id}', ${idx})" title="Edit answer" aria-label="Edit answer">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
             </button>
+            ${isCustom ? `<button class="icon-btn" onclick="aiQA('${j.id}', ${idx})" title="Draft this answer with AI (~$0.005)" aria-label="Draft answer with AI">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.091 3.091zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"/></svg>
+            </button>` : ""}
             <button class="icon-btn danger" onclick="deleteQA('${j.id}', ${idx})" title="Delete" aria-label="Delete">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166M18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397M3.75 5.79c.34-.059.68-.114 1.022-.165m7.5-1.41a48.667 48.667 0 00-7.5 0"/></svg>
             </button>
@@ -3455,16 +3497,44 @@ window.copyQA = function(jobId, idx) {
   window.copyText(null, text);
 };
 
+// Edit an answer inline (textarea), not via a prompt() popup.
 window.editQA = function(jobId, idx) {
   const j = state.jobs.find(x => x.id === jobId);
   if (!j || !j.qa?.[idx]) return;
-  const newAnswer = prompt(`Edit answer for:\n\n${j.qa[idx].question}`, j.qa[idx].answer || "");
-  if (newAnswer == null) return;
-  j.qa[idx].answer = newAnswer;
-  j.qa[idx].edited = true;
+  qaEditingIdx = idx; qaAdding = false;
+  renderJobDetail(j, false);
+};
+window.cancelQA = function(jobId) {
+  const j = state.jobs.find(x => x.id === jobId);
+  qaEditingIdx = null;
+  if (j) renderJobDetail(j, false);
+};
+window.saveQA = function(jobId, idx) {
+  const j = state.jobs.find(x => x.id === jobId);
+  if (!j || !j.qa?.[idx]) return;
+  const ta = document.getElementById("qa_edit_ta");
+  if (ta) { j.qa[idx].answer = ta.value.trim(); j.qa[idx].edited = true; }
+  qaEditingIdx = null;
   saveState();
   renderJobDetail(j, false);
   showToast("Answer updated");
+};
+// Draft (or redraft) a single custom question's answer with one Claude call.
+window.aiQA = async function(jobId, idx) {
+  const j = state.jobs.find(x => x.id === jobId);
+  if (!j || !j.qa?.[idx]) return;
+  const q = j.qa[idx].question || "";
+  if (!q.trim()) { showToast("Add the question text first."); return; }
+  // If we're editing this item inline, fill the open textarea; otherwise save onto the item.
+  const ta = (qaEditingIdx === idx) ? document.getElementById("qa_edit_ta") : null;
+  try {
+    showToast("Drafting answer with Claude…", 2200);
+    const answer = await _draftOneQAAnswer(j, q);
+    if (!answer) throw new Error("Empty response");
+    if (ta) { ta.value = answer; }
+    else { j.qa[idx].answer = answer; j.qa[idx].edited = false; saveState(); renderJobDetail(j, false); }
+    showToast("Answer drafted");
+  } catch (e) { showToast("AI draft failed: " + (e.message || e), 3500); }
 };
 
 window.deleteQA = function(jobId, idx) {
@@ -3574,19 +3644,76 @@ Return ONLY valid JSON: { "qa": [{ "question": "<verbatim question text>", "answ
   }
 };
 
+// Show the inline add-custom-question form (replaces the old two prompt() popups).
 window.addCustomQA = function(jobId) {
   const j = state.jobs.find(x => x.id === jobId);
   if (!j) return;
-  const q = prompt("Question text (from the application form):");
-  if (!q || !q.trim()) return;
-  const a = prompt(`Your answer to:\n\n${q.trim()}\n\n(You can also leave blank and use AI to draft it later.)`, "");
-  const entry = { question: q.trim(), answer: (a || "").trim(), source: "custom", edited: true };
+  qaAdding = true; qaEditingIdx = null;
+  renderJobDetail(j, false);
+};
+window.cancelNewQA = function(jobId) {
+  const j = state.jobs.find(x => x.id === jobId);
+  qaAdding = false;
+  if (j) renderJobDetail(j, false);
+};
+window.saveNewQA = function(jobId) {
+  const j = state.jobs.find(x => x.id === jobId);
+  if (!j) return;
+  const q = (document.getElementById("qa_new_q")?.value || "").trim();
+  const a = (document.getElementById("qa_new_a")?.value || "").trim();
+  if (!q) { showToast("Enter the question text first."); return; }
   if (!Array.isArray(j.qa)) j.qa = [];
-  j.qa.push(entry);
+  j.qa.push({ question: q, answer: a, source: "custom", edited: true });
+  qaAdding = false;
   saveState();
   renderJobDetail(j, false);
-  showToast("Custom Q&A added");
+  showToast("Custom question added");
 };
+// Draft the answer for the in-progress add form (fills the answer textarea, doesn't save yet).
+window.aiNewQA = async function(jobId) {
+  const j = state.jobs.find(x => x.id === jobId);
+  if (!j) return;
+  const q = (document.getElementById("qa_new_q")?.value || "").trim();
+  if (!q) { showToast("Type the question first."); return; }
+  const btn = document.getElementById("qa_new_ai");
+  if (btn) { btn.disabled = true; btn.textContent = "Drafting…"; }
+  try {
+    const answer = await _draftOneQAAnswer(j, q);
+    const ta = document.getElementById("qa_new_a");
+    if (ta && answer) ta.value = answer;
+    showToast(answer ? "Answer drafted" : "Empty response", answer ? 2000 : 3000);
+  } catch (e) { showToast("AI draft failed: " + (e.message || e), 3500); }
+  finally { if (btn) { btn.disabled = false; btn.textContent = "✨ AI draft"; } }
+};
+// Shared: draft ONE application answer via a single Claude call (profile + persona + job context).
+async function _draftOneQAAnswer(j, questionText) {
+  const profile = state.profile;
+  const persona = personaContext(criteriaForJob(j));
+  const profileBlock = {
+    name: profile.full_name, location: profile.location,
+    current_role: profile.current_role, target_titles: profile.target_titles,
+    work_history: profile.work_history || [],
+    notice_period: profile.notice_period, work_authorization: profile.work_auth,
+    life_biography: (profile.life_bio_text || "").slice(0, 2000),
+    professional_biography: (profile.prof_bio_text || "").slice(0, 2000)
+  };
+  const prompt = `You are helping ${profile.full_name || "the candidate"} answer ONE question on a job application. Write a tailored answer (2-4 sentences, neutral professional tone, no exclamation marks). Return ONLY the answer text — no preamble, no quotes, no label.
+
+QUESTION:
+${questionText}
+
+CANDIDATE PROFILE: ${JSON.stringify(profileBlock, null, 2)}
+
+JOB: ${j.title} @ ${j.company || "?"}
+Location: ${(j.locations || []).join(", ")} (${j.work_arrangement || "?"})
+Tech: ${(j.tech_stack || []).join(", ")}
+Requirements: ${(j.requirements || []).slice(0, 8).join("; ")}
+Interview process: ${(j.interview_process || "—").slice(0, 400)}
+${persona ? `\nWHAT THE CANDIDATE IS LOOKING FOR (their target profile — use to frame "why this role / why this company" answers): ${persona}\n` : ""}`;
+  const result = await askClaude(prompt, [], 0.005, "haiku", "Draft Q&A answer", 700);
+  const text = typeof result === "string" ? result : (result?.content || result?.text || "");
+  return (text || "").trim();
+}
 
 // The most recent Claude FE/BE estimate produced from the INTAKE breakdown card (which has no
 // saved job to attach to yet). buildJobFromIntake reads this and attaches it to the new job.
@@ -4536,6 +4663,7 @@ function applyJobDetail(jobId, sub) {
   backBtn.textContent = jobDetailReturnCtx.type === "batch" ? "← Back to batch" : "← Back to Unbatched";
   // Honor a deep-linked sub-tab; otherwise open a freshly-selected job on Overview.
   subtabState["job"] = sub || "overview";
+  qaEditingIdx = null; qaAdding = false;   // reset inline Q&A editors when opening a job
   renderJobDetail(j, false);
   window.scrollTo(0, 0);
 }
@@ -4751,7 +4879,7 @@ Return JSON only.`;
       <div class="muted" style="margin-bottom:8px">${escapeHtml(j.company || "—")}${j.industry ? ` · ${escapeHtml(j.industry)}` : ""}${j.company_size ? ` · ${escapeHtml(j.company_size)}` : ""}</div>
       <div class="tags" style="margin-bottom:10px">
         ${screenTag}${target}
-        <span class="tag ${j.status}">${escapeHtml(j.status)}</span>
+        <button class="tag ${j.status}" id="d_status" title="Change status" aria-label="Change status" style="border:0;cursor:pointer;font:inherit;font-size:11px;display:inline-flex;align-items:center;gap:3px">${escapeHtml(j.status)} <span aria-hidden="true" style="opacity:.7">▾</span></button>
         ${j.fe_percent != null ? `<span class="tag" style="background:var(--accent-soft);color:var(--accent-soft-fg)">FE ${j.fe_percent}%</span>` : ""}
       </div>
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
@@ -4860,6 +4988,7 @@ Return JSON only.`;
       runAiFitSingle(j, () => renderJobDetail(j, false));
     }
   });
+  document.getElementById("d_status").addEventListener("click", () => openJobStatusSheet(j));
   document.getElementById("d_edit").addEventListener("click", () => renderJobDetail(j, true));
   document.getElementById("d_aifit_btn")?.addEventListener("click", () => runAiFitSingle(j, () => renderJobDetail(j, false)));
   document.getElementById("d_psdate").addEventListener("click", () => {
@@ -4900,6 +5029,12 @@ Return JSON only.`;
     showToast("Job deleted");
   });
   initSubtabs(root.querySelector('.subtabs'), { hashFor: k => location.hash.startsWith("#/job/") ? "#/job/" + encodeURIComponent(j.id) + "/" + k : null });
+  // Focus the active inline Q&A editor (add form or answer textarea) after render.
+  if (qaAdding) {
+    requestAnimationFrame(() => { const t = document.getElementById("qa_new_q"); if (t) t.focus(); });
+  } else if (qaEditingIdx != null) {
+    requestAnimationFrame(() => { const t = document.getElementById("qa_edit_ta"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } });
+  }
 }
 
 // ============================================================================
@@ -5651,6 +5786,23 @@ function updateSelectedJobStatus(b) {
       saveState();
       showToast(`Updated ${ids.length} job(s) → ${val}`, 3000);
       renderBatchJobs(b);
+    }
+  })));
+}
+
+// Change ONE job's status from the job detail page — bottom drawer of statuses.
+// Applies the same phone_screen_at/response_at side-effects as the batch status controls.
+function openJobStatusSheet(j) {
+  showActionSheet("Set status to…", JOB_STATUSES.map(([val, label]) => ({
+    label: val === j.status ? `${label} ✓` : label,
+    onClick: () => {
+      if (val === j.status) return;
+      j.status = val;
+      if (val === "phonescreen" && !j.phone_screen_at) j.phone_screen_at = nowISO();
+      if (["phonescreen", "onsite", "offer", "rejected_by_co"].includes(val) && !j.response_at) j.response_at = nowISO();
+      saveState();
+      showToast(`Status: ${label}`, 2000);
+      renderJobDetail(j, false);
     }
   })));
 }
@@ -6847,6 +6999,11 @@ function jobsForDashFilter(filter) {
   return state.jobs.filter(j => ids.has(j.id));
 }
 
+// A "response" = the company got back to us (a phone screen or beyond, or a direct rejection).
+// Derived from CURRENT status — not the sticky response_at timestamp — so the funnel stays
+// monotonic (responses can never exceed submissions) even if a job's status is moved back later.
+function jobResponded(j) { return ["phonescreen", "onsite", "offer", "rejected_by_co"].includes(j.status); }
+
 function renderDashboard() {
   // Criteria-set filter selector
   const fsel = document.getElementById("d_filter_criteria");
@@ -6862,7 +7019,7 @@ function renderDashboard() {
 
   const jobs = jobsForDashFilter(dashFilter);
   const submitted = jobs.filter(j => j.status !== "queued" && j.status !== "batched");
-  const responded = jobs.filter(j => j.response_at);
+  const responded = jobs.filter(jobResponded);
   const screens = jobs.filter(j => ["phonescreen","onsite","offer"].includes(j.status));
   const onsites = jobs.filter(j => ["onsite","offer"].includes(j.status));
   const offers = jobs.filter(j => j.status === "offer");
@@ -6895,7 +7052,7 @@ function renderDashboard() {
   const batches = batchList.map(b => {
     const bJobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
     const apps = bJobs.filter(j => j.status !== "batched" && j.status !== "queued").length;
-    const resp = bJobs.filter(j => j.response_at).length;
+    const resp = bJobs.filter(jobResponded).length;
     const screen = bJobs.filter(j => ["phonescreen","onsite","offer"].includes(j.status)).length;
     const offer = bJobs.filter(j => j.status === "offer").length;
     return { id: b.id, apps, resp, screen, offer };
@@ -6932,7 +7089,7 @@ function renderDashboard() {
     const setBatches = state.batches.filter(b => b.criteria_id === cs.id);
     const sJobs = setBatches.flatMap(b => b.job_ids).map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
     const sub = sJobs.filter(j => j.status !== "queued" && j.status !== "batched").length;
-    const resp = sJobs.filter(j => j.response_at).length;
+    const resp = sJobs.filter(jobResponded).length;
     const scr = sJobs.filter(j => ["phonescreen","onsite","offer"].includes(j.status)).length;
     const off = sJobs.filter(j => j.status === "offer").length;
     return { name: cs.name, enabled: csEnabled(cs), batches: setBatches.length, sub, resp, scr, off,
