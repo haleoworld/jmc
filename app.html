@@ -162,7 +162,7 @@ header h1 {
 .header-actions-row .cost-counter:first-of-type { margin-left: auto; }
 /* Bottom navigation — sits as the last flex child of .app; safe-area padding for iPhone home bar */
 nav.tabs {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
   background: rgba(255,255,255,.92);
   backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px);
   border-top: 1px solid var(--line);
@@ -222,10 +222,13 @@ h3 { font-size: 13px; margin: 14px 0 6px; color: var(--muted); text-transform: u
 .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
 .col { flex: 1 1 200px; }
 label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
-input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], textarea, select {
+input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], input[type=search], textarea, select {
   width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; font: inherit; font-size: 12px; background: var(--card); color: var(--fg);
   transition: border-color .15s;
 }
+/* Reset the native search-field pill/decorations so it matches the app's other inputs. */
+input[type=search] { -webkit-appearance: none; appearance: none; }
+input[type=search]::-webkit-search-decoration, input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; }
 textarea { min-height: 100px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.5; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 /* Collapsible read-mode note: clamped 3-line preview + chevron; tap to expand. Shared by company + interview-preset notes. */
@@ -618,7 +621,7 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   /* Larger touch targets */
   button.btn { min-height: 40px; padding: 10px 18px; font-size: 14px; }
   button.btn.ghost, button.btn.secondary, button.btn.danger { min-height: 40px; }
-  input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], textarea, select {
+  input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], input[type=password], input[type=search], textarea, select {
     font-size: 12px; /* iOS focus-zoom already blocked by viewport maximum-scale=1 */
     padding: 10px 14px;
     min-height: 44px;
@@ -889,12 +892,6 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
     <button class="fab" id="b_fab" aria-label="Add" title="Add a job or a batch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
     </button>
-    <div class="row" style="gap:6px;align-items:center;margin-bottom:10px">
-      <input type="search" id="b_search_input" placeholder="Search all jobs by title, company, location…" autocomplete="off" enterkeyhint="search" style="flex:1 1 auto">
-      <button class="icon-btn" id="b_search_btn" title="Search jobs" aria-label="Search jobs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-      </button>
-    </div>
     <div class="row" style="gap:8px;align-items:center;margin-bottom:10px">
       <label style="margin:0;flex:0 0 auto;font-size:13px;color:var(--muted)">Criteria set</label>
       <select id="b_filter_criteria" title="Filter batches by criteria set" style="flex:1 1 auto;max-width:280px"></select>
@@ -906,25 +903,14 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   </div>
   <div id="b_detail_view" style="display:none">
     <button class="btn ghost" id="b_back_btn" style="margin-bottom:10px">← Back to all batches</button>
-    <div class="row" style="gap:6px;align-items:center;margin-bottom:10px">
-      <input type="search" id="bd_search_input" placeholder="Search all jobs by title, company, location…" autocomplete="off" enterkeyhint="search" style="flex:1 1 auto">
-      <button class="icon-btn" id="bd_search_btn" title="Search jobs" aria-label="Search jobs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-      </button>
-    </div>
     <div id="b_detail"></div>
   </div>
 </section>
 
-<!-- ========== SEARCH RESULTS (jobs matching a keyword, across all jobs) ========== -->
+<!-- ========== SEARCH (filter all jobs by keyword as you type) ========== -->
 <section class="view" data-view="search">
-  <button class="btn ghost" id="srch_back_btn" style="margin-bottom:10px">← Back</button>
-  <div class="row" style="gap:6px;align-items:center;margin-bottom:10px">
-    <input type="search" id="srch_input" placeholder="Search all jobs by title, company, location…" autocomplete="off" enterkeyhint="search" style="flex:1 1 auto">
-    <button class="icon-btn" id="srch_btn" title="Search jobs" aria-label="Search jobs">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
-    </button>
-  </div>
+  <h2>Search</h2>
+  <input type="search" id="srch_input" placeholder="Search all jobs by title, company, location…" autocomplete="off" enterkeyhint="search" style="width:100%;margin-bottom:10px">
   <div class="muted small" id="srch_meta" style="margin-bottom:8px"></div>
   <div class="card" id="srch_card">
     <div id="srch_list"></div>
@@ -1319,6 +1305,10 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
   <button data-tab="batches" aria-label="Batches" title="Batches">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z"/></svg>
     <span class="tab-label">Batches</span>
+  </button>
+  <button data-tab="search" aria-label="Search" title="Search">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+    <span class="tab-label">Search</span>
   </button>
   <button data-tab="dashboard" aria-label="Dashboard" title="Dashboard">
     <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.942"/></svg>
@@ -2169,16 +2159,17 @@ function updateCostCounter() {
 // Queue ("Unbatched") lives under the Batches tab; Settings lives behind the hamburger (no bottom tab).
 let currentView = "batches";
 let lastMainView = "batches";
-const VIEW_TO_TAB = { queue: "batches", batches: "batches", resumes: "resumes", dashboard: "dashboard", settings: null };
+const VIEW_TO_TAB = { queue: "batches", batches: "batches", search: "search", resumes: "resumes", dashboard: "dashboard", settings: null };
 
 // Low-level: render a top-level view in place. Does NOT touch the URL. The router calls this.
 function applyTab(name) {
   currentView = name;
-  if (name !== "settings" && name !== "search") lastMainView = name;
+  if (name !== "settings") lastMainView = name;
   const tab = VIEW_TO_TAB[name] || null;
   document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
   document.querySelectorAll("section.view").forEach(v => v.classList.toggle("active", v.dataset.view === name));
   if (name === "queue") renderQueue();
+  if (name === "search") renderSearch(document.getElementById("srch_input")?.value || "");
   if (name === "batches") renderBatches();
   if (name === "resumes") renderResumes();
   if (name === "dashboard") renderDashboard();
@@ -5498,15 +5489,10 @@ function renderBatchResume(b) {
 document.getElementById("b_back_btn").addEventListener("click", () => showTab("batches"));
 
 // ============================================================================
-// Job search — global keyword search across ALL jobs. Matches job title,
-// company, and location. Launched from the batch list, a batch page, or the
-// results page itself; navigates to #/search/<query> and lists matching jobs.
+// Job search — a dedicated Search bottom-tab. Filters ALL jobs live as you type,
+// matching job title, company, and location. (#/search is the tab; #/search/<q>
+// still works as a deep link.)
 // ============================================================================
-function submitJobSearch(inputEl) {
-  const q = ((inputEl && inputEl.value) || "").trim();
-  if (!q) { showToast("Type a keyword to search."); if (inputEl) inputEl.focus(); return; }
-  navigate("#/search/" + encodeURIComponent(q));
-}
 
 // Lower-cased text we match keywords against (title + company + location).
 function jobSearchHaystack(j) {
@@ -5562,13 +5548,11 @@ function renderSearch(query) {
   });
 }
 
-// Wire the three search inputs/buttons (batch list, batch detail, results page).
-[["b_search_input", "b_search_btn"], ["bd_search_input", "bd_search_btn"], ["srch_input", "srch_btn"]].forEach(([inId, btnId]) => {
-  const inp = document.getElementById(inId), btn = document.getElementById(btnId);
-  if (inp) inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); submitJobSearch(inp); } });
-  if (btn) btn.addEventListener("click", () => submitJobSearch(inp));
-});
-document.getElementById("srch_back_btn").addEventListener("click", () => { if (history.length > 1) history.back(); else showTab("batches"); });
+// Search tab — filter all jobs live as you type.
+(() => {
+  const inp = document.getElementById("srch_input");
+  if (inp) inp.addEventListener("input", () => renderSearch(inp.value));
+})();
 
 function renderBatchAnalysis(b) {
   const card = document.getElementById("b_analysis_card");
