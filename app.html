@@ -947,6 +947,10 @@ button.icon-btn.small svg { width: 14px; height: 14px; }
       <div class="card" id="r_edit_card" style="display:none">
     <h3 id="r_edit_title">Edit resume</h3>
     <div class="row"><div class="col">
+      <label>Version name</label>
+      <input id="r_name" type="text" style="font-size:12px" placeholder="e.g. Frontend-focused, ATS-tuned">
+    </div></div>
+    <div class="row"><div class="col">
       <label>Version notes — what changed vs the prior version</label>
       <textarea id="r_notes" style="min-height:60px;font-family:inherit;font-size:11px" placeholder="e.g. Added 'design system' to S&P Global bullet. Strengthened metrics on Amazon role."></textarea>
     </div></div>
@@ -1581,6 +1585,7 @@ function loadState() {
       if (s.resumes?.versions) s.resumes.versions.forEach(v => {
         if (typeof v.template !== "string") v.template = "";
         if (typeof v.notes !== "string") v.notes = v.notes || "";
+        if (typeof v.name !== "string") v.name = "";
         if (!v.template_id) v.template_id = "tpl_classic_orange";
       });
       if (!Array.isArray(s.templates) || !s.templates.length) {
@@ -1673,7 +1678,7 @@ function defaultState() {
     batches: [],
     resumes: {
       versions: [{
-        id: "v1", created_at: todayISO(), filename: "v1.md", notes: "Initial",
+        id: "v1", created_at: todayISO(), filename: "v1.md", name: "", notes: "Initial",
         batch_id: null, parent: null,
         template_id: "tpl_classic_orange",
         content: "# Jerry Lau\nSenior Frontend Engineer · Toronto, ON · jerrylauky.001@gmail.com\n\n[Replace with your real resume in plain text or markdown]"
@@ -3571,6 +3576,7 @@ window.acceptResumeEdit = function(batchId) {
     alert("Couldn't find the exact 'before' text in the resume. Opening the resume editor — paste the 'after' text where appropriate.");
     document.getElementById("r_edit_card").style.display = "block";
     document.getElementById("r_edit_title").textContent = "Apply suggested edit manually";
+    document.getElementById("r_name").value = "";
     document.getElementById("r_notes").value = `Address gap: ${ri.chosen_keyword} (per ${b.id})`;
     document.getElementById("r_content").value = resume.content;
     document.getElementById("r_save_btn").dataset.id = "";
@@ -3579,7 +3585,7 @@ window.acceptResumeEdit = function(batchId) {
   }
   const newId = "v" + state.nextResumeId++;
   state.resumes.versions.push({
-    id: newId, created_at: todayISO(), filename: newId + ".md",
+    id: newId, created_at: todayISO(), filename: newId + ".md", name: "",
     notes: `Address gap: ${ri.chosen_keyword} (per ${b.id})`,
     batch_id: b.id, parent: resume.id, content: newContent
   });
@@ -6724,8 +6730,9 @@ function renderResumes() {
     });
     item.innerHTML = `
       <div class="grow">
-        <div>${escapeHtml(v.id)} <span class="muted small">${escapeHtml(v.created_at)}</span></div>
-        <div class="muted small">${escapeHtml(v.notes || "")} ${v.parent ? `· parent: ${escapeHtml(v.parent)}` : ""} ${v.batch_id ? `· batch: ${escapeHtml(v.batch_id)}` : ""}</div>
+        <div>${escapeHtml(v.id)}${v.name ? ` <span style="font-weight:600">${escapeHtml(v.name)}</span>` : ""} <span class="muted small">${escapeHtml(v.created_at)}</span></div>
+        ${v.notes ? `<div class="muted small" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4">${escapeHtml(v.notes)}</div>` : ""}
+        ${v.parent || v.batch_id ? `<div class="muted small">${v.parent ? `parent: ${escapeHtml(v.parent)}` : ""}${v.parent && v.batch_id ? " · " : ""}${v.batch_id ? `batch: ${escapeHtml(v.batch_id)}` : ""}</div>` : ""}
       </div>
       <button class="icon-btn r_gen" data-id="${v.id}" title="Generate formatted resume (Word / PDF)" aria-label="Generate">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
@@ -7075,6 +7082,7 @@ function editResume(id) {
   const v = id ? state.resumes.versions.find(x => x.id === id) : null;
   document.getElementById("r_edit_card").style.display = "block";
   document.getElementById("r_edit_title").textContent = v ? `Edit ${v.id}` : "New version";
+  document.getElementById("r_name").value = v ? v.name || "" : "";
   document.getElementById("r_notes").value = v ? v.notes || "" : "";
   document.getElementById("r_content").value = v ? v.content : "";
   document.getElementById("r_save_btn").dataset.id = id || "";
@@ -7101,15 +7109,16 @@ document.getElementById("r_manage_templates_link").addEventListener("click", () 
 document.getElementById("r_new_btn").addEventListener("click", () => editResume(null));
 document.getElementById("r_save_btn").addEventListener("click", () => {
   const id = document.getElementById("r_save_btn").dataset.id;
+  const name = document.getElementById("r_name").value.trim();
   const notes = document.getElementById("r_notes").value;
   const content = document.getElementById("r_content").value;
   const template_id = document.getElementById("r_template_select").value;
   if (id) {
     const v = state.resumes.versions.find(x => x.id === id);
-    if (v) { v.notes = notes; v.content = content; v.template_id = template_id; }
+    if (v) { v.name = name; v.notes = notes; v.content = content; v.template_id = template_id; }
   } else {
     const newId = "v" + state.nextResumeId++;
-    state.resumes.versions.push({ id: newId, created_at: todayISO(), filename: newId + ".md", notes, template_id, batch_id: null, parent: null, content });
+    state.resumes.versions.push({ id: newId, created_at: todayISO(), filename: newId + ".md", name, notes, template_id, batch_id: null, parent: null, content });
   }
   saveState(); document.getElementById("r_edit_card").style.display = "none"; renderResumes();
 });
