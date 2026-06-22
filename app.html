@@ -1560,18 +1560,24 @@ function bestFitSet(job) {
 // Backfill multi-set screening + match scores for jobs screened before these features
 // existed (in-memory; persists on next save). Recomputes if screening_all is missing or
 // the cached headline result predates the match-% scoring.
-(state.jobs || []).forEach(j => {
-  const hasContent = (j.raw_text && j.raw_text.length > 50) || (j.tech_stack || []).length || (j.requirements || []).length;
-  if (!hasContent) return;
-  const stale = !j.screening || j.screening.score_v !== 2;
-  if (!j.screening_all || stale) {
-    j.screening_all = screenJobAllSets(j);
-    if (stale) {
-      const id = j.screened_against;
-      j.screening = (id && j.screening_all[id]) || j.screening_all[(activeCriteria() || {}).id] || j.screening;
+// NOTE: declared as a (hoisted) function and invoked from Init rather than run inline —
+// it drives the screening pipeline, whose const dependencies (NEG_WINDOW, NEGATION_PATTERNS,
+// vocab tables, …) are declared later in the file and would be in the temporal dead zone
+// during top-level execution, throwing "Cannot access X before initialization".
+function backfillJobScreening() {
+  (state.jobs || []).forEach(j => {
+    const hasContent = (j.raw_text && j.raw_text.length > 50) || (j.tech_stack || []).length || (j.requirements || []).length;
+    if (!hasContent) return;
+    const stale = !j.screening || j.screening.score_v !== 2;
+    if (!j.screening_all || stale) {
+      j.screening_all = screenJobAllSets(j);
+      if (stale) {
+        const id = j.screened_against;
+        j.screening = (id && j.screening_all[id]) || j.screening_all[(activeCriteria() || {}).id] || j.screening;
+      }
     }
-  }
-});
+  });
+}
 let sessionCost = 0;
 
 function loadState() {
@@ -7745,6 +7751,7 @@ relocateResumeSubtabs();   // move criteria + templates cards into the Resumes s
 const _rsub = (location.hash || "").match(/^#\/(?:setup|resumes)\/([^/]+)/);
 if (_rsub) subtabState["resumes"] = decodeURIComponent(_rsub[1]);
 initSubtabs(document.querySelector('.subtabs[data-subtab-group="resumes"]'), { hashFor: k => (location.hash.startsWith("#/setup") || location.hash.startsWith("#/resumes")) ? "#/setup/" + k : null });
+backfillJobScreening();   // re-screen stale/unscreened jobs now that all screening consts are initialized
 route();   // apply the initial view from location.hash (defaults to #/batches)
 updateCostCounter();
 setSyncIndicator(state.settings?.last_synced_at ? "synced" : "off");
