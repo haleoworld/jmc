@@ -1,0 +1,11 @@
+# Public deploy repo (haleoworld/jmc). Whitelist approach: ignore everything,
+# then re-include only the app + its tooling + docs. Personal/reference files
+# (resume & bio PDFs, Basic Info.md, data/, legacy/, .DS_Store) stay local and
+# are never published. This is intentionally a whitelist so private filenames
+# aren't even listed here.
+/*
+!/app.html
+!/README.md
+!/DEPLOY.md
+!/tools
+!/.gitignore
