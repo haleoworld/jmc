@@ -1401,7 +1401,7 @@ const DEFAULT_TEMPLATE_CLASSIC = {
 PAGE / PRINT (exact):
 - @page { size: A4; margin: 0; }
 - html, body { background:#ffffff; }
-- body { margin:0; padding: 13mm 15mm; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+- body { margin:0; padding: 12mm 13mm; box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 - Do NOT use max-width or margin:0 auto centering. Content fills the full padded page width edge-to-edge inside the padding. (A narrow centered column wastes width and adds pages — avoid it.)
 
 HEADER
@@ -6946,8 +6946,8 @@ function showGenerateResumeModal(versionId) {
 // Default download name: "Resume - {full name} {version notes}"
 function defaultResumeFilename(v) {
   const name = (state.profile.full_name || "Resume").trim();
-  const notes = (v.notes || v.id || "").trim();
-  const base = `Resume - ${name}${notes ? " " + notes : ""}`;
+  const label = (v.name || v.notes || v.id || "").trim();
+  const base = `Resume - ${name}${label ? " " + label : ""}`;
   return base.replace(/[\/\\:*?"<>|]/g, "").replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
@@ -6962,7 +6962,7 @@ async function regenerateResume(v) {
 
 CRITICAL PRINT CSS (so the exported PDF has NO browser headers/footers like date, URL, or page numbers):
 - Use exactly: @page { size: A4; margin: 0; }
-- Do NOT put margins on @page. Instead put the page margins as PADDING on the body, e.g. body { padding: 18mm 16mm; box-sizing: border-box; }
+- Do NOT put margins on @page. Instead put the page margins as PADDING on the body, using the EXACT padding given in the TEMPLATE INSTRUCTIONS below. Keep box-sizing: border-box. Do not increase it.
 - Add to body: -webkit-print-color-adjust: exact; print-color-adjust: exact;  (so the orange section headers print in color)
 
 TEMPLATE INSTRUCTIONS:
@@ -7100,13 +7100,23 @@ function printHtml(html, title) {
   frame.style.cssText = "position:fixed;left:-10000px;top:0;width:794px;height:1123px;border:0;";
   document.body.appendChild(frame);
   const run = () => {
+    const prevTitle = document.title;
+    // iOS Safari names the saved PDF after the TOP page's <title>, ignoring the
+    // print iframe's own <title>. Swap document.title so the file gets the right
+    // name, then restore it after the print dialog closes.
+    if (title) document.title = title;
+    const restore = () => { document.title = prevTitle; };
     try {
       const cw = frame.contentWindow;
+      cw.addEventListener("afterprint", restore, { once: true });
       cw.focus();
       cw.print();
     } catch (e) {
+      restore();
       alert("Print failed: " + e.message + "\nTip: use the Word (.doc) or HTML download instead.");
     }
+    // Fallback in case afterprint never fires (some mobile print flows).
+    setTimeout(restore, 60000);
   };
   const fdoc = frame.contentWindow.document;
   fdoc.open();
