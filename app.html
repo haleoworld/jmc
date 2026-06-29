@@ -5279,7 +5279,7 @@ function applyBatchDetail(batchId, sub) {
   document.getElementById("b_detail_view").style.display = "block";
   const root = document.getElementById("b_detail");
   const jobs = b.job_ids.map(id => state.jobs.find(j => j.id === id)).filter(Boolean);
-  const resumeOptions = state.resumes.versions.map(v => `<option value="${v.id}" ${b.resume_version_id === v.id ? "selected" : ""}>${escapeHtml(v.id)} — ${escapeHtml(v.notes || "")}</option>`).join("");
+  const resumeOptions = state.resumes.versions.map(v => `<option value="${v.id}" ${b.resume_version_id === v.id ? "selected" : ""}>${escapeHtml(v.id)}${v.name ? " - " + escapeHtml(v.name) : ""}</option>`).join("");
   // Criteria options: enabled sets, plus the batch's current set even if it's been disabled (so it isn't lost).
   const activeCrit = criteriaById(b.criteria_id);
   const critSets = enabledCriteriaSets().slice();
